@@ -1,0 +1,13 @@
+[
+  {
+    "id": 29688,
+    "orgConfigId": 29708,
+    "simSetId": 1,
+    "dispatchedRuns": 0,
+    "runCount": 0,
+    "randomStreamType": "static",
+    "days": 10,
+    "running": false,
+    "converged": false
+  }
+]

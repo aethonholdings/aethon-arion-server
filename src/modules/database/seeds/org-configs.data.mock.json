@@ -1,0 +1,47 @@
+[
+  {
+    "id": 29708,
+    "type": "C1",
+    "clockTickSeconds": 300,
+    "agentCount": 1,
+    "board": {},
+    "agentSet": {
+      "judgmentTensor": [[[[0],[0]],[[0],[0]]]],
+      "priorityTensor": [[[0.5,0.5],[0.5,0.5]]],
+      "incentiveTensor": [[[
+        [0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0]],
+        [[0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0]]]],
+      "influenceTensor": [[[[0,0],[0,0]]]]
+    },
+    "plant": {
+      "initialState": [0]
+    },
+    "reporting": {
+      "unitPayroll": 1,
+      "unitPrice": 1
+    },
+    "priorityIntensity": 0,
+    "influenceIntensity": 0,
+    "judgmentIntensity": 0,
+    "incentiveIntensity": 0,
+    "configuratorParams": {
+      "data": {
+        "gains": {
+          "judgment": 0,
+          "incentive": 0,
+          "influence": 0
+        },
+        "spans": 1,
+        "layers": 1,
+        "matrixInit": {
+          "judgment": "null",
+          "incentive": "null",
+          "influence": "null"
+        }
+      },
+      "configuratorName": "C1Configurator"
+    }
+  }
+]
