@@ -24,7 +24,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
-    "aethon-arion-c1": "^0.1.0",
+    "aethon-arion-c1": "^0.2.0",
     "aethon-arion-db": "^0.1.1",
     "aethon-arion-pipeline": "^0.1.0",
     "@nestjs/common": "^10.3.10",
