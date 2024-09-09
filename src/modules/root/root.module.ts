@@ -6,6 +6,7 @@ import environment from "../../../env/environment";
 
 import { DatabaseModule } from "../database/database.module";
 import { ModelModule } from "../model/model.module";
+import { DatabaseService } from "../database/database.service";
 
 const env = environment();
 
@@ -29,4 +30,8 @@ const env = environment();
         ModelModule
     ]
 })
-export class RootModule {}
+export class RootModule {
+    constructor(private databaseService: DatabaseService) {
+        (env.database.synchronize)? this.databaseService.purgeDb() : null;
+    }
+}
