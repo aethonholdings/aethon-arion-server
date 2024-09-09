@@ -13,7 +13,6 @@ export default () =>
             password: "*******",
             database: "arion",
             synchronize: false,
-            seed: false
         },
         storeStateSpace: true,
         convergenceMargin: 0.001,

@@ -11,7 +11,6 @@ export interface ServerEnvironment {
         password: string;
         database: string;
         synchronize: boolean;
-        seed: boolean;
     };
     storeStateSpace: boolean;
     convergenceMargin: number;

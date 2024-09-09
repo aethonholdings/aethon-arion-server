@@ -1,6 +1,5 @@
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
-import { DatabaseService } from "./database.service";
 
 import { SimConfig, SimSet, OrgConfig, Result, StateSpacePoint } from "aethon-arion-db";
 
@@ -12,7 +11,7 @@ import { SimConfig, SimSet, OrgConfig, Result, StateSpacePoint } from "aethon-ar
         SimSet,
         StateSpacePoint
     ])],
-    providers: [DatabaseService],
-    exports: [DatabaseService]
+    providers: [],
+    exports: []
 })
 export class DatabaseModule {}
