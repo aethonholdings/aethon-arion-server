@@ -1,8 +1,10 @@
 import { Controller, Get, Post, Body, Param } from "@nestjs/common";
 import { ResultService } from "./result.service";
 import { ResultDTO } from "aethon-arion-pipeline";
+import { ApiTags } from "@nestjs/swagger";
 
 @Controller("result")
+@ApiTags("Result")
 export class ResultController {
     constructor(private readonly resultService: ResultService) {}
 

@@ -2,8 +2,10 @@ import { Controller, Get, Param, Query } from "@nestjs/common";
 import { SimConfigService } from "./sim-config.service";
 import { ResultDTO, SimConfigDTO } from "aethon-arion-pipeline";
 import { Paginate, Paginated, PaginateQuery } from "nestjs-paginate";
+import { ApiTags } from "@nestjs/swagger";
 
 @Controller("sim-config")
+@ApiTags('SimConfig')
 export class SimConfigController {
     constructor(private readonly configService: SimConfigService) {}
 
