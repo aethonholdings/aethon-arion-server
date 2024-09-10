@@ -152,4 +152,8 @@ export class SimConfigService {
                 throw this.modelService.badRequest(err, this._logger);
             });
     }
+
+    delete(id: number): Promise<number> {
+        return this.modelService.deleteRecord(id, this._logger, this.dataSource.getRepository(SimConfig));
+    }
 }

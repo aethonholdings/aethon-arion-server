@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, Query } from "@nestjs/common";
 import { SimConfigService } from "./sim-config.service";
 import { ResultDTO, SimConfigDTO } from "aethon-arion-pipeline";
 import { Paginate, Paginated, PaginateQuery } from "nestjs-paginate";
@@ -57,5 +57,17 @@ export class SimConfigController {
         @Body() SimConfigDTOCreate: SimConfigDTOCreate
     ): Promise<SimConfigDTO> | null {
         return this.simConfigService.create(SimConfigDTOCreate);
+    }
+
+    // endpoint that deletes a SimConfig by ID
+    @Delete(":id")
+    @ApiParam({
+        name: "id",
+        type: Number,
+        description: "The ID of the SimConfig to be deleted",
+        example: 1
+    })
+    delete(@Param("id") id: number): Promise<number> {
+        return this.simConfigService.delete(id);
     }
 }
