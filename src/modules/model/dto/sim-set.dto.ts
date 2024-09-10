@@ -7,7 +7,7 @@ export class SimSetDTOCreate {
         name: "description",
         type: "string",
         description: "Text description of the simulation set",
-        example: "Here is a test description    "
+        example: "Here is a test description"
     })
     description: string;
 

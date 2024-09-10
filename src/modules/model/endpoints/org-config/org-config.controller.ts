@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, Query } from "@nestjs/common";
 import { OrgConfigService } from "./org-config.service";
 import { OrgConfigDTO } from "aethon-arion-pipeline";
 import { ApiBody, ApiParam, ApiQuery, ApiTags } from "@nestjs/swagger";
@@ -42,5 +42,17 @@ export class OrgConfigController {
     })
     create(@Body() configuratorParamsDTO: ConfiguratorParamsDTOCreate): Promise<OrgConfigDTO> {
         return this.orgConfigService.create(configuratorParamsDTO);
+    }
+
+    // endpoint that deletes an OrgConfig by ID
+    @Delete(":id")
+    @ApiParam({
+        name: "id",
+        type: Number,
+        description: "The ID of the OrgConfig to be deleted",
+        example: 1
+    })
+    delete(@Param("id") id: number): Promise<number> {
+        return this.orgConfigService.delete(id);
     }
 }

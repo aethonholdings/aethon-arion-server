@@ -70,14 +70,6 @@ export class SimSetService {
     }
 
     delete(id: number): Promise<number> {
-        return this.dataSource
-            .getRepository(SimSet)
-            .delete(id)
-            .then(() => {
-                return id;
-            })
-            .catch((err) => {
-                throw this.modelService.badRequest(err, this._logger);
-            });
+        return this.modelService.deleteRecord(id, this._logger, this.dataSource.getRepository(SimSet));
     }
 }

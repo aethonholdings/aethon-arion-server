@@ -43,4 +43,14 @@ export class ModelService {
         }
         return new HttpException(message, HttpStatus.BAD_REQUEST);
     }
+
+    deleteRecord(id: number, logger: Logger, repository: any): Promise<number> {
+        return repository
+            .delete({ id: id })
+            .then((result) => {
+                if(result.affected) return id; else throw new Error("No record found");
+            }).catch((err) => {
+                throw this.badRequest(err, logger);
+            });;
+    }
 }
