@@ -3,8 +3,8 @@ import { SimSetService } from "./sim-set.service";
 import { ResultDTO, SimConfigDTO, SimSetDTO } from "aethon-arion-pipeline";
 import { Paginate, Paginated } from "nestjs-paginate";
 import { ApiBody, ApiParam, ApiTags } from "@nestjs/swagger";
-import { SimSetDTOCreate } from "src/modules/model/dtos/sim-set.dto";
-import { SimConfigDTOCreate } from "src/modules/model/dtos/sim-config.dto";
+import { SimSetDTOCreate } from "src/modules/model/dto/sim-set.dto";
+import { SimConfigDTOCreate } from "src/modules/model/dto/sim-config.dto";
 
 @Controller("sim-set")
 @ApiTags("SimSet")

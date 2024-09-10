@@ -1,6 +1,6 @@
 import { OrgConfig } from "aethon-arion-db";
 import { ConfiguratorParamsDTO, OrgConfigDTO } from "aethon-arion-pipeline";
-import { HttpException, HttpStatus, Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { DataSource } from "typeorm";
 import { ModelService } from "../../services/model/model.service";
 
@@ -21,25 +21,23 @@ export class OrgConfigService {
                 relations: { simConfigs: true }
             })
             .catch((err) => {
-                this._logger.log(err);
-                throw new HttpException("Invalid query", HttpStatus.BAD_REQUEST);
+                throw this.modelService.badRequest(err, this._logger);
             });
     }
 
-    findAll(type?: string, agentCount?: number): Promise<OrgConfigDTO[]> {
+    findAll(type?: string): Promise<OrgConfigDTO[]> {
         return this.dataSource
             .getRepository(OrgConfig)
-            .find({ where: { type: type, agentCount: agentCount } })
+            .find({ where: { type: type } })
             .catch((err) => {
-                this._logger.log(err);
-                throw new HttpException("Invalid query", HttpStatus.BAD_REQUEST);
+                throw this.modelService.badRequest(err, this._logger);
             });
     }
 
     create(configuratorParamsDTO: ConfiguratorParamsDTO): Promise<OrgConfigDTO> {
         return new Promise((resolve, reject) => {
             const configurator = this.modelService.getConfigurator(configuratorParamsDTO);
-            if (!configurator) return reject(new HttpException("Invalid configurator", HttpStatus.BAD_REQUEST));
+            if (!configurator) return reject(new Error("Invalid configurator name"));
             return resolve(configurator.generate(configuratorParamsDTO));
         })
             .then((orgConfigDTO: OrgConfigDTO) => {
@@ -50,8 +48,7 @@ export class OrgConfigService {
                 return this.dataSource.getRepository(OrgConfig).save(toSave);
             })
             .catch((err) => {
-                this._logger.log(err);
-                throw new HttpException("Invalid query", HttpStatus.BAD_REQUEST);
+                throw this.modelService.badRequest(err, this._logger);
             });
     }
 }
