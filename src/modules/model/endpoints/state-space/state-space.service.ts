@@ -1,14 +1,15 @@
 import { StateSpacePoint } from "aethon-arion-db";
 import { StateSpacePointDTO } from "aethon-arion-pipeline";
-import { HttpException, HttpStatus, Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { DataSource } from "typeorm";
+import { ModelService } from "../../services/model/model.service";
 
 @Injectable()
 export class StateSpaceService {
     private _logger: Logger = new Logger(StateSpaceService.name);
-    constructor(private dataSource: DataSource) {}
+    constructor(private dataSource: DataSource, private modelService: ModelService) {}
 
-    findOne(resultId: number): Promise<StateSpacePointDTO[]> {
+    find(resultId: number): Promise<StateSpacePointDTO[]> {
         return this.dataSource
             .getRepository(StateSpacePoint)
             .find({
@@ -16,8 +17,7 @@ export class StateSpaceService {
                 order: { clockTick: "ASC" }
             })
             .catch((err) => {
-                this._logger.error(err);
-                throw new HttpException("Invalid query", HttpStatus.BAD_REQUEST);
+                throw this.modelService.badRequest(err, this._logger);
             });
     }
 }
