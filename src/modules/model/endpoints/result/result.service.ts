@@ -1,9 +1,9 @@
+import environment from "env/environment";
 import { Injectable, Logger } from "@nestjs/common";
 import { DataSource } from "typeorm";
 import { Result, StateSpacePoint, SimConfig } from "aethon-arion-db";
 import { Utils, ResultDTO, ResultSet } from "aethon-arion-pipeline";
 import { ServerEnvironment } from "src/interfaces/interfaces";
-import environment from "env/environment";
 import { ModelService } from "../../services/model/model.service";
 
 @Injectable()
@@ -111,7 +111,7 @@ export class ResultService {
 
     findOne(id: number): Promise<ResultDTO> {
         try {
-            return this.dataSource.getRepository(Result).findOne({
+            return this.dataSource.getRepository(Result).findOneOrFail({
                 where: { id: id },
                 relations: {
                     simConfig: {
