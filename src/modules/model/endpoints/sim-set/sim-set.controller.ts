@@ -2,7 +2,8 @@ import { Body, Controller, Delete, Get, Param, Post, Query } from "@nestjs/commo
 import { SimSetService } from "./sim-set.service";
 import { ConfiguratorParamsDTO, SimConfigDTO, SimSetDTO } from "aethon-arion-pipeline";
 import { Paginate } from "nestjs-paginate";
-import { ApiTags } from "@nestjs/swagger";
+import { ApiBody, ApiParam, ApiTags } from "@nestjs/swagger";
+import { SimSetDTOValidatorCreate } from "src/modules/dtos/sim-set.dto";
 
 @Controller("sim-set")
 @ApiTags("SimSet")
@@ -15,13 +16,18 @@ export class SimSetController {
     }
 
     @Get(":id")
+    @ApiParam({ name: "id", type: Number, description: "The unique identifier of the simulation set", example: 1 })
     view(@Param("id") id: number) {
         return this.simSetService.findOne(id);
     }
 
     @Post()
-    create(@Body() simSet: SimSetDTO) {
-        return this.simSetService.create(simSet);
+    @ApiBody({
+        type: SimSetDTOValidatorCreate,
+        examples: { example1: { value: { description: "Simulation set for testing the new model", type: "C1" } } }
+    })
+    create(@Body() simSet: SimSetDTOValidatorCreate) {
+        return this.simSetService.create(simSet as SimSetDTO);
     }
 
     @Post(":id/generate")
