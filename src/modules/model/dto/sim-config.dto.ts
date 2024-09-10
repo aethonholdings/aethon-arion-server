@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsNumber, IsString } from "class-validator";
+import { IsEnum, IsIn, IsNumber } from "class-validator";
 
 export class SimConfigDTOCreate {
     @IsNumber()
@@ -20,7 +20,7 @@ export class SimConfigDTOCreate {
     })
     days: number;
 
-    @IsString()
+    @IsIn(["static", "random"])
     @ApiProperty({
         name: "randomStreamType",
         type: "string",
