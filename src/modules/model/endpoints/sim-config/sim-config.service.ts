@@ -1,12 +1,11 @@
 import environment from "env/environment";
 import * as fs from "fs";
-import { HttpException, HttpStatus, Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { DataSource } from "typeorm";
 import { OrgConfig, Result, SimConfig, SimSet } from "aethon-arion-db";
 import { ResultDTO, SimConfigDTO } from "aethon-arion-pipeline";
 import { ServerEnvironment } from "src/interfaces/interfaces";
 import { paginate, Paginated, PaginateQuery } from "nestjs-paginate";
-import { OrgConfigService } from "../org-config/org-config.service";
 import { ModelService } from "../../services/model/model.service";
 import { SimConfigDTOCreate } from "../../dto/sim-config.dto";
 
@@ -17,7 +16,6 @@ export class SimConfigService {
 
     constructor(
         private dataSource: DataSource,
-        private orgConfigService: OrgConfigService,
         private modelService: ModelService
     ) {}
 
@@ -26,12 +24,11 @@ export class SimConfigService {
             const seeds = JSON.parse(fs.readFileSync("./data/input/seeds/rand.seeds.json", "utf8")) as number[];
             return seeds;
         } catch (err) {
-            this._logger.error(err);
-            throw new HttpException("Failed to access seeds data", HttpStatus.INTERNAL_SERVER_ERROR);
+            throw this.modelService.badRequest(err, this._logger);
         }
     }
 
-    async next(nodeId: string): Promise<SimConfigDTO> {
+    next(nodeId: string): Promise<SimConfigDTO> {
         return this.dataSource
             .getRepository(SimConfig)
             .findOne({
@@ -49,15 +46,15 @@ export class SimConfigService {
                     simConfig.simSet.save().then(() => {
                         if (this._environment.dev) this._logger.log("SimSet updated");
                     });
-                    simConfig.save().then(() => {
-                        if (this._environment.dev) this._logger.log("SimConfig updated");
-                    });
+                    return simConfig.save();
                 }
+            })
+            .then((simConfig) => {
+                if (this._environment.dev) this._logger.log("SimConfig updated");
                 return simConfig;
             })
             .catch((err) => {
-                this._logger.error(err);
-                throw new HttpException("Failed to define next run", HttpStatus.INTERNAL_SERVER_ERROR);
+                throw this.modelService.badRequest(err, this._logger);
             });
     }
 
@@ -69,8 +66,7 @@ export class SimConfigService {
                 where: { id: id }
             })
             .catch((err) => {
-                this._logger.error(err);
-                throw new HttpException("Invalid query", HttpStatus.BAD_REQUEST);
+                throw this.modelService.badRequest(err, this._logger);
             });
     }
 
@@ -93,8 +89,7 @@ export class SimConfigService {
                 return paginated as Paginated<SimConfigDTO>;
             })
             .catch((err) => {
-                this._logger.error(err);
-                throw new HttpException("Invalid query", HttpStatus.BAD_REQUEST);
+                throw this.modelService.badRequest(err, this._logger);
             });
     }
 
@@ -111,8 +106,7 @@ export class SimConfigService {
                 where: { simConfigId: id }
             })
             .catch((err) => {
-                this._logger.error(err);
-                throw new HttpException("Invalid query", HttpStatus.BAD_REQUEST);
+                throw this.modelService.badRequest(err, this._logger);
             });
     }
 
@@ -131,16 +125,15 @@ export class SimConfigService {
                         orgConfig: orgConfig,
                         runCount: 0,
                         dispatchedRuns: 0,
-                        randomStreamType: (simConfigDTO?.randomStreamType)? simConfigDTO?.randomStreamType: this._environment.randomStreamType,
+                        randomStreamType: simConfigDTO?.randomStreamType
+                            ? simConfigDTO?.randomStreamType
+                            : this._environment.randomStreamType,
                         days: this._environment.simulationDays,
                         converged: false,
                         running: false,
                         state: "pending"
                     });
-                    return Promise.all([
-                        simConfig,
-                        simSet.save()
-                    ]);
+                    return Promise.all([simConfig, simSet.save()]);
                 } else {
                     throw new Error("Incompatible model signature with SimSet");
                 }
