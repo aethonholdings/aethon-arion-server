@@ -4,6 +4,15 @@ import { IsEnum, IsIn, IsNumber } from "class-validator";
 export class SimConfigDTOCreate {
     @IsNumber()
     @ApiProperty({
+        name: "simSetId",
+        type: Number,
+        description: "The unique identifier of the simulation set to generate a SimConfig for",
+        example: 1
+    })
+    simSetId: number;
+
+    @IsNumber()
+    @ApiProperty({
         name: "orgConfigId",
         type: Number,
         description: "The unique identifier of the OrgConfig to generate the simulation config for",

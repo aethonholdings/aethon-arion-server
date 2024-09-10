@@ -34,25 +34,6 @@ export class SimSetController {
         return this.simSetService.create(simSet as SimSetDTO);
     }
 
-    // endpoint that generates OrgConfigs and SimConfigs for a SimSet
-    @Post(":id/sim-config")
-    @ApiParam({
-        name: "id",
-        type: Number,
-        description: "The unique identifier of the simulation set to generate a SimConfig for",
-        example: 1
-    })
-    @ApiBody({
-        type: SimConfigDTOCreate,
-        description: "The parameters of the simulation to be created under the simulation set"
-    })
-    generateSimConfig(
-        @Param("id") simSetId: number,
-        @Body() SimConfigDTOCreate: SimConfigDTOCreate
-    ): Promise<SimConfigDTO> | null {
-        return this.simSetService.generateSimConfig(simSetId, SimConfigDTOCreate as SimConfigDTO);
-    }
-
     // endpoint that fetches an array of the Results of a SimSet
     @Get(":id/result")
     @ApiParam({

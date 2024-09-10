@@ -69,29 +69,6 @@ export class SimSetService {
         }
     }
 
-    generateSimConfig(simSetId: number, simConfigDTO: SimConfigDTO): Promise<SimConfigDTO> {
-        return this.dataSource
-            .getRepository(SimSet)
-            .findOneOrFail({ where: { id: simSetId } })
-            .then((simSet) => {
-                return Promise.all([this.orgConfigService.findOne(simConfigDTO.orgConfigId), simSet]);
-            })
-            .then(([orgConfig, simSet]) => {
-                if (orgConfig.type === simSet.type) {
-                    simSet.simConfigCount++;
-                    return Promise.all([this.simConfigService.create(orgConfig.id, simSet.id), simSet.save()]);
-                } else {
-                    throw new Error("Incompatible model signature with SimSet");
-                }
-            })
-            .then(([simConfig, simSet]) => {
-                return simConfig;
-            })
-            .catch((err) => {
-                throw this.modelService.badRequest(err, this._logger);
-            });
-    }
-
     delete(id: number): Promise<number> {
         return this.dataSource
             .getRepository(SimSet)

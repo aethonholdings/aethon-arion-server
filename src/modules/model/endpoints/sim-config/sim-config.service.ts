@@ -1,18 +1,25 @@
+import environment from "env/environment";
 import * as fs from "fs";
 import { HttpException, HttpStatus, Injectable, Logger } from "@nestjs/common";
 import { DataSource } from "typeorm";
 import { OrgConfig, Result, SimConfig, SimSet } from "aethon-arion-db";
 import { ResultDTO, SimConfigDTO } from "aethon-arion-pipeline";
-import environment from "env/environment";
 import { ServerEnvironment } from "src/interfaces/interfaces";
 import { paginate, Paginated, PaginateQuery } from "nestjs-paginate";
+import { OrgConfigService } from "../org-config/org-config.service";
+import { ModelService } from "../../services/model/model.service";
+import { SimConfigDTOCreate } from "../../dto/sim-config.dto";
 
 @Injectable()
 export class SimConfigService {
     private _logger: Logger = new Logger(SimConfigService.name);
     private _environment: ServerEnvironment = environment();
 
-    constructor(private dataSource: DataSource) {}
+    constructor(
+        private dataSource: DataSource,
+        private orgConfigService: OrgConfigService,
+        private modelService: ModelService
+    ) {}
 
     async seeds(): Promise<number[]> {
         try {
@@ -109,38 +116,40 @@ export class SimConfigService {
             });
     }
 
-    async create(orgConfigId: number, simSetId: number): Promise<SimConfigDTO> {
-        return Promise.allSettled([
-            this.dataSource.getRepository(SimSet).findOne({
-                where: { id: simSetId }
-            }),
-            await this.dataSource.getRepository(OrgConfig).findOne({
-                where: { id: orgConfigId }
-            })
-        ])
-            .then((results) => {
-                if (results[0].status === "fulfilled" && results[1].status === "fulfilled") {
-                    const simSet: SimSet = results[0].value;
-                    const orgConfig: OrgConfig = results[1].value;
+    create(simConfigDTO: SimConfigDTOCreate): Promise<SimConfigDTO> {
+        const queries = Promise.all([
+            this.dataSource.getRepository(SimSet).findOneOrFail({ where: { id: simConfigDTO.simSetId } }),
+            this.dataSource.getRepository(OrgConfig).findOneOrFail({ where: { id: simConfigDTO.orgConfigId } })
+        ]);
+
+        return queries
+            .then(([simSet, orgConfig]) => {
+                if (orgConfig.type === simSet.type) {
                     simSet.simConfigCount++;
-                    return this.dataSource.getRepository(SimConfig).save({
+                    const simConfig = this.dataSource.getRepository(SimConfig).save({
                         simSet: simSet,
                         orgConfig: orgConfig,
                         runCount: 0,
                         dispatchedRuns: 0,
-                        randomStreamType: this._environment.randomStreamType,
+                        randomStreamType: (simConfigDTO?.randomStreamType)? simConfigDTO?.randomStreamType: this._environment.randomStreamType,
                         days: this._environment.simulationDays,
                         converged: false,
                         running: false,
                         state: "pending"
-                    }) as Promise<SimConfigDTO>; // why is this needed?
+                    });
+                    return Promise.all([
+                        simConfig,
+                        simSet.save()
+                    ]);
                 } else {
-                    throw new Error("Creating simconfig - failed to create SimSet or OrgConfig");
+                    throw new Error("Incompatible model signature with SimSet");
                 }
             })
+            .then(([simConfig, simSet]) => {
+                return simConfig;
+            })
             .catch((err) => {
-                this._logger.error(err);
-                throw new HttpException("Invalid query", HttpStatus.BAD_REQUEST);
+                throw this.modelService.badRequest(err, this._logger);
             });
     }
 }
