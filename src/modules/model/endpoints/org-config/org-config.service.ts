@@ -16,12 +16,12 @@ export class OrgConfigService {
     findOne(id: number): Promise<OrgConfigDTO> {
         return this.dataSource
             .getRepository(OrgConfig)
-            .findOne({
+            .findOneOrFail({
                 where: { id: id },
                 relations: { simConfigs: true }
             })
             .catch((err) => {
-                this._logger.error(err);
+                this._logger.log(err);
                 throw new HttpException("Invalid query", HttpStatus.BAD_REQUEST);
             });
     }
@@ -31,7 +31,7 @@ export class OrgConfigService {
             .getRepository(OrgConfig)
             .find({ where: { type: type, agentCount: agentCount } })
             .catch((err) => {
-                this._logger.error(err);
+                this._logger.log(err);
                 throw new HttpException("Invalid query", HttpStatus.BAD_REQUEST);
             });
     }

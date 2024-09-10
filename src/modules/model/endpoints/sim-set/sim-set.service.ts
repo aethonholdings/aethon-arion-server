@@ -1,13 +1,14 @@
+import environment from "env/environment";
 import { SimSet } from "aethon-arion-db";
-import { ConfiguratorParamsDTO, SimConfigDTO, SimSetDTO } from "aethon-arion-pipeline";
-import { HttpException, HttpStatus, Injectable, Logger } from "@nestjs/common";
-import { DataSource, DeleteResult } from "typeorm";
+import { SimConfigDTO, SimSetDTO } from "aethon-arion-pipeline";
+import { Injectable, Logger } from "@nestjs/common";
+import { DataSource } from "typeorm";
 import { OrgConfigService } from "../org-config/org-config.service";
 import { SimConfigService } from "../sim-config/sim-config.service";
-import environment from "env/environment";
 import { ServerEnvironment } from "src/interfaces/interfaces";
-import { Paginated, PaginateQuery } from 'nestjs-paginate';
+import { Paginated, PaginateQuery } from "nestjs-paginate";
 import { ResultService } from "../result/result.service";
+import { ModelService } from "../../services/model/model.service";
 
 @Injectable()
 export class SimSetService {
@@ -18,7 +19,8 @@ export class SimSetService {
         private dataSource: DataSource,
         private orgConfigService: OrgConfigService,
         private simConfigService: SimConfigService,
-        private resultService: ResultService
+        private resultService: ResultService,
+        private modelService: ModelService
     ) {}
 
     findAll(query: any): Promise<SimSetDTO[]> {
@@ -26,70 +28,79 @@ export class SimSetService {
             .getRepository(SimSet)
             .find(query)
             .catch((err) => {
-                this._logger.log(err);
-                throw new HttpException("Invalid query", HttpStatus.BAD_REQUEST);
+                throw this.modelService.badRequest(err, this._logger);
             });
     }
 
     findOne(id: number): Promise<SimSetDTO> {
         return this.dataSource
             .getRepository(SimSet)
-            .findOne({
+            .findOneOrFail({
                 relations: ["simConfigs"],
                 where: { id: id }
             })
             .catch((err) => {
-                this._logger.log(err);
-                throw new HttpException("Invalid query", HttpStatus.BAD_REQUEST);
+                throw this.modelService.badRequest(err, this._logger);
             });
     }
 
     findSimConfigs(id: number, paginateQuery: PaginateQuery): Promise<Paginated<SimConfigDTO>> {
-        return this.simConfigService.findAll(id, paginateQuery);
+        return this.simConfigService.findAll(id, paginateQuery).catch((err) => {
+            throw this.modelService.badRequest(err, this._logger);
+        });
     }
 
     findResults(id: number): Promise<any> {
-        if (this._environment.dev)
-            this._logger.log("Fetching result data for SimSet " + id);
-        return this.resultService.findAll({ simSetId: id });
+        if (this._environment.dev) this._logger.log("Fetching result data for SimSet " + id);
+        return this.resultService.findAll({ simSetId: id }).catch((err) => {
+            throw this.modelService.badRequest(err, this._logger);
+        });
     }
 
     create(simSet: SimSetDTO): Promise<SimSetDTO> {
         try {
-            return this.dataSource.getRepository(SimSet).save(simSet);
+            if (this.modelService.getModelNames().includes(simSet.type)) {
+                return this.dataSource.getRepository(SimSet).save(simSet);
+            } else {
+                throw new Error("Invalid model type");
+            }
         } catch (err) {
-            this._logger.log(err);
-            throw new HttpException("Could not create SimSet", HttpStatus.BAD_REQUEST);
+            throw this.modelService.badRequest(err, this._logger);
         }
     }
 
-    generateSimConfig(simSetId: number, configuratorParamDTO: ConfiguratorParamsDTO): Promise<SimConfigDTO> {
+    generateSimConfig(simSetId: number, simConfigDTO: SimConfigDTO): Promise<SimConfigDTO> {
         return this.dataSource
             .getRepository(SimSet)
-            .findOne({ where: { id: simSetId } })
+            .findOneOrFail({ where: { id: simSetId } })
             .then((simSet) => {
-                return Promise.all([this.orgConfigService.create(configuratorParamDTO), simSet]);
+                return Promise.all([this.orgConfigService.findOne(simConfigDTO.orgConfigId), simSet]);
             })
             .then(([orgConfig, simSet]) => {
-                simSet.simConfigCount++;
-                return Promise.all([simSet.save(), orgConfig]);
+                if (orgConfig.type === simSet.type) {
+                    simSet.simConfigCount++;
+                    return Promise.all([this.simConfigService.create(orgConfig.id, simSet.id), simSet.save()]);
+                } else {
+                    throw new Error("Incompatible model signature with SimSet");
+                }
             })
-            .then(([simSet, orgConfig]) => {
-                return this.simConfigService.create(orgConfig.id, simSet.id);
+            .then(([simConfig, simSet]) => {
+                return simConfig;
             })
             .catch((err) => {
-                this._logger.log(err);
-                throw new HttpException("Invalid query", HttpStatus.BAD_REQUEST);
+                throw this.modelService.badRequest(err, this._logger);
             });
     }
 
-    delete(id: number): Promise<DeleteResult> {
+    delete(id: number): Promise<number> {
         return this.dataSource
             .getRepository(SimSet)
             .delete(id)
+            .then(() => {
+                return id;
+            })
             .catch((err) => {
-                this._logger.log(err);
-                throw new HttpException("Could not delete SimSet", HttpStatus.BAD_REQUEST);
+                throw this.modelService.badRequest(err, this._logger);
             });
     }
 }
