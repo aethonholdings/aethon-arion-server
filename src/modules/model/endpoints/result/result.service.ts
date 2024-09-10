@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { DataSource } from "typeorm";
 import { Result, StateSpacePoint, SimConfig } from "aethon-arion-db";
 import { Utils, ResultDTO, ResultSet } from "aethon-arion-pipeline";
@@ -47,10 +47,11 @@ export class ResultService {
                 simConfig.stdDevPerformance = summaryStatistics.stDevPerformance;
                 simConfig.entropy = summaryStatistics.entropy;
                 simConfig.runCount++;
-                if (this._environment.dev) this._logger.log("Checking convergence");
+                simConfig.simSet.completedRunCount++;
                 // check for convergence
                 let converged: boolean = false;
                 if (simConfig.runCount >= 2 && simConfig.runCount >= this._environment.minRuns) {
+                    if (this._environment.dev) this._logger.log("Checking convergence");
                     if (currentStdDev > 0) {
                         const percentChange = (simConfig.stdDevPerformance - currentStdDev) / currentStdDev;
                         converged = percentChange < this._environment.convergenceMargin ? true : false;
@@ -59,26 +60,26 @@ export class ResultService {
                     }
                 }
                 if (converged) {
-                    simConfig.converged = true;
-                    simConfig.end = new Date();
-                    simConfig.durationSec = (simConfig.end.getTime() - simConfig.start.getTime()) / 1000;
                     simConfig.state = "completed";
                     simConfig.simSet.state = "completed";
-                    simConfig.simSet.completedSimConfigCount++;
+                    if (!simConfig.converged) {
+                        simConfig.simSet.completedSimConfigCount++;
+                        simConfig.end = new Date();
+                        simConfig.durationSec = (simConfig.end.getTime() - simConfig.start.getTime()) / 1000;
+                    }
                 }
-                simConfig.simSet.completedRunCount++;
+
                 // save the simConfig
                 if (this._environment.dev) this._logger.log("Saving result");
                 return Promise.all([simConfig.save(), simConfig.simSet.save(), result.save()]);
             })
-            .then((resultArray) => {
+            .then(([simConfig, simSet, result]) => {
                 // save the state space if applicable
-                const resultId = resultArray[2].id;
-                if (this._environment.dev) this._logger.log("Result saved with id: " + resultId);
+                if (this._environment.dev) this._logger.log("Result saved with id: " + result.id);
                 if (this._environment?.storeStateSpace) {
                     if (this._environment.dev) this._logger.log("Saving state space asyncronously");
                     resultDto.stateSpace.forEach((stateSpacePointDto) => {
-                        stateSpacePointDto.resultId = resultId;
+                        stateSpacePointDto.resultId = result.id;
                     });
                     this.dataSource
                         .getRepository(StateSpacePoint)
@@ -87,12 +88,11 @@ export class ResultService {
                             if (this._environment.dev) this._logger.log("State space saved");
                         });
                 }
-                if (this._environment.dev) this._logger.log("Result " + resultId + " successfully created");
-                return resultId;
+                if (this._environment.dev) this._logger.log("Result " + result.id + " successfully created");
+                return result.id;
             })
             .catch((err) => {
-                this._logger.log(err);
-                throw new HttpException("Could not create Result record", HttpStatus.BAD_REQUEST);
+                throw this.modelService.badRequest(err, this._logger);
             });
     }
 
@@ -105,8 +105,7 @@ export class ResultService {
                 }
             });
         } catch (err) {
-            this._logger.log(err);
-            throw new HttpException("Could not create find Result", HttpStatus.BAD_REQUEST);
+            throw this.modelService.badRequest(err, this._logger);
         }
     }
 
@@ -121,8 +120,7 @@ export class ResultService {
                 }
             });
         } catch (err) {
-            this._logger.log(err);
-            throw new HttpException("Could not create find Result", HttpStatus.BAD_REQUEST);
+            throw this.modelService.badRequest(err, this._logger);
         }
     }
 }

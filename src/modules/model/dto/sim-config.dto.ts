@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsEnum, IsIn, IsNumber } from "class-validator";
+import { IsIn, IsNumber } from "class-validator";
 
 export class SimConfigDTOCreate {
     @IsNumber()
