@@ -43,12 +43,6 @@ export class SimConfigController {
         return this.simConfigService.next(nodeId);
     }
 
-    // endpoint that fetches the static random number generator seeds for the simulation
-    @Get("seeds")
-    seeds(): Promise<number[]> {
-        return this.simConfigService.seeds();
-    }
-
     // endpoint that fetches a single SimConfig by ID
     @Get(":id")
     @ApiParam({

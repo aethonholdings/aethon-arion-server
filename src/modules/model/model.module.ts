@@ -10,6 +10,8 @@ import { SimSetController } from './endpoints/sim-set/sim-set.controller';
 import { SimSetService } from './endpoints/sim-set/sim-set.service';
 import { StateSpaceController } from './endpoints/state-space/state-space.controller';
 import { StateSpaceService } from './endpoints/state-space/state-space.service';
+import { SeedsController } from './endpoints/seeds/seeds/seeds.controller';
+import { SeedsService } from './endpoints/seeds/seeds/seeds.service';
 
 @Module({
     controllers: [
@@ -17,7 +19,8 @@ import { StateSpaceService } from './endpoints/state-space/state-space.service';
         ResultController,
         OrgConfigController,
         SimSetController,
-        StateSpaceController
+        StateSpaceController,
+        SeedsController
     ],
     providers: [
         ModelService,
@@ -25,7 +28,8 @@ import { StateSpaceService } from './endpoints/state-space/state-space.service';
         ResultService,
         OrgConfigService,
         SimSetService,
-        StateSpaceService
+        StateSpaceService,
+        SeedsService
     ]
 })
 export class ModelModule {}
