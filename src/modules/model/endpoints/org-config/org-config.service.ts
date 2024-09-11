@@ -21,7 +21,7 @@ export class OrgConfigService {
                 relations: { simConfigs: true }
             })
             .catch((err) => {
-                throw this.modelService.badRequest(err, this._logger);
+                throw this.modelService.error(err, this._logger);
             });
     }
 
@@ -30,7 +30,7 @@ export class OrgConfigService {
             .getRepository(OrgConfig)
             .find({ where: { type: type } })
             .catch((err) => {
-                throw this.modelService.badRequest(err, this._logger);
+                throw this.modelService.error(err, this._logger);
             });
     }
 
@@ -48,7 +48,7 @@ export class OrgConfigService {
                 return this.dataSource.getRepository(OrgConfig).save(toSave);
             })
             .catch((err) => {
-                throw this.modelService.badRequest(err, this._logger);
+                throw this.modelService.error(err, this._logger);
             });
     }
 

@@ -13,7 +13,7 @@ export class SeedsService {
             const seeds = JSON.parse(fs.readFileSync("./data/input/seeds/rand.seeds.json", "utf8")) as number[];
             return seeds;
         } catch (err) {
-            throw this.modelService.badRequest(err, this._logger);
+            throw this.modelService.error(err, this._logger);
         }
     }
 }

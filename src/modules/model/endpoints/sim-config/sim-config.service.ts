@@ -1,4 +1,4 @@
-import environment from "env/environment";
+import environment from "../../../../../env/environment";
 import { Injectable, Logger } from "@nestjs/common";
 import { DataSource } from "typeorm";
 import { OrgConfig, Result, SimConfig, SimSet } from "aethon-arion-db";
@@ -44,7 +44,7 @@ export class SimConfigService {
                 return simConfig;
             })
             .catch((err) => {
-                throw this.modelService.badRequest(err, this._logger);
+                throw this.modelService.error(err, this._logger);
             });
     }
 
@@ -56,7 +56,7 @@ export class SimConfigService {
                 where: { id: id }
             })
             .catch((err) => {
-                throw this.modelService.badRequest(err, this._logger);
+                throw this.modelService.error(err, this._logger);
             });
     }
 
@@ -79,7 +79,7 @@ export class SimConfigService {
                 return paginated as Paginated<SimConfigDTO>;
             })
             .catch((err) => {
-                throw this.modelService.badRequest(err, this._logger);
+                throw this.modelService.error(err, this._logger);
             });
     }
 
@@ -96,7 +96,7 @@ export class SimConfigService {
                 where: { simConfigId: id }
             })
             .catch((err) => {
-                throw this.modelService.badRequest(err, this._logger);
+                throw this.modelService.error(err, this._logger);
             });
     }
 
@@ -132,7 +132,7 @@ export class SimConfigService {
                 return simConfig;
             })
             .catch((err) => {
-                throw this.modelService.badRequest(err, this._logger);
+                throw this.modelService.error(err, this._logger);
             });
     }
 

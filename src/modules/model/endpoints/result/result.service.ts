@@ -1,4 +1,4 @@
-import environment from "env/environment";
+import environment from "../../../../../env/environment";
 import { Injectable, Logger } from "@nestjs/common";
 import { DataSource } from "typeorm";
 import { Result, StateSpacePoint, SimConfig } from "aethon-arion-db";
@@ -92,7 +92,7 @@ export class ResultService {
                 return result.id;
             })
             .catch((err) => {
-                throw this.modelService.badRequest(err, this._logger);
+                throw this.modelService.error(err, this._logger);
             });
     }
 
@@ -105,7 +105,7 @@ export class ResultService {
                 }
             });
         } catch (err) {
-            throw this.modelService.badRequest(err, this._logger);
+            throw this.modelService.error(err, this._logger);
         }
     }
 
@@ -120,7 +120,7 @@ export class ResultService {
                 }
             });
         } catch (err) {
-            throw this.modelService.badRequest(err, this._logger);
+            throw this.modelService.error(err, this._logger);
         }
     }
 }

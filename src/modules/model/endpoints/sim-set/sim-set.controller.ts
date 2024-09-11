@@ -3,8 +3,7 @@ import { SimSetService } from "./sim-set.service";
 import { ResultDTO, SimConfigDTO, SimSetDTO } from "aethon-arion-pipeline";
 import { Paginate, Paginated } from "nestjs-paginate";
 import { ApiBody, ApiParam, ApiTags } from "@nestjs/swagger";
-import { SimSetDTOCreate } from "src/modules/model/dto/sim-set.dto";
-import { SimConfigDTOCreate } from "src/modules/model/dto/sim-config.dto";
+import { SimSetDTOCreate } from "../../../../../src/modules/model/dto/sim-set.dto";
 
 @Controller("sim-set")
 @ApiTags("SimSet")
@@ -13,7 +12,7 @@ export class SimSetController {
 
     // endpoint that fetches an index of all SimSets
     @Get()
-    index(@Query() query: any): Promise<SimSetDTO[]> {
+    index(@Query() query?: any): Promise<SimSetDTO[]> {
         return this.simSetService.findAll(query);
     }
 

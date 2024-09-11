@@ -1,11 +1,10 @@
-import environment from "env/environment";
+import environment from "../../../../../env/environment";
 import { SimSet } from "aethon-arion-db";
 import { SimConfigDTO, SimSetDTO } from "aethon-arion-pipeline";
-import { Injectable, Logger } from "@nestjs/common";
+import { HttpStatus, Injectable, Logger } from "@nestjs/common";
 import { DataSource } from "typeorm";
-import { OrgConfigService } from "../org-config/org-config.service";
 import { SimConfigService } from "../sim-config/sim-config.service";
-import { ServerEnvironment } from "src/interfaces/interfaces";
+import { ServerEnvironment } from "../../../../../src/interfaces/interfaces";
 import { Paginated, PaginateQuery } from "nestjs-paginate";
 import { ResultService } from "../result/result.service";
 import { ModelService } from "../../services/model/model.service";
@@ -17,7 +16,6 @@ export class SimSetService {
 
     constructor(
         private dataSource: DataSource,
-        private orgConfigService: OrgConfigService,
         private simConfigService: SimConfigService,
         private resultService: ResultService,
         private modelService: ModelService
@@ -28,7 +26,7 @@ export class SimSetService {
             .getRepository(SimSet)
             .find(query)
             .catch((err) => {
-                throw this.modelService.badRequest(err, this._logger);
+                throw this.modelService.error(err, this._logger);
             });
     }
 
@@ -40,20 +38,20 @@ export class SimSetService {
                 where: { id: id }
             })
             .catch((err) => {
-                throw this.modelService.badRequest(err, this._logger);
+                throw this.modelService.error(err, this._logger, err.message, HttpStatus.NOT_FOUND);
             });
     }
 
     findSimConfigs(id: number, paginateQuery: PaginateQuery): Promise<Paginated<SimConfigDTO>> {
         return this.simConfigService.findAll(id, paginateQuery).catch((err) => {
-            throw this.modelService.badRequest(err, this._logger);
+            throw this.modelService.error(err, this._logger);
         });
     }
 
     findResults(id: number): Promise<any> {
         if (this._environment.dev) this._logger.log("Fetching result data for SimSet " + id);
         return this.resultService.findAll({ simSetId: id }).catch((err) => {
-            throw this.modelService.badRequest(err, this._logger);
+            throw this.modelService.error(err, this._logger);
         });
     }
 
@@ -65,7 +63,7 @@ export class SimSetService {
                 throw new Error("Invalid model type");
             }
         } catch (err) {
-            throw this.modelService.badRequest(err, this._logger);
+            throw this.modelService.error(err, this._logger);
         }
     }
 

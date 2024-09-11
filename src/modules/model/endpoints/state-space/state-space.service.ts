@@ -17,7 +17,7 @@ export class StateSpaceService {
                 order: { clockTick: "ASC" }
             })
             .catch((err) => {
-                throw this.modelService.badRequest(err, this._logger);
+                throw this.modelService.error(err, this._logger);
             });
     }
 }
