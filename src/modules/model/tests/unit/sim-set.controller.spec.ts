@@ -1,22 +1,23 @@
+import { environment } from "../env/test.env";
 import { Test, TestingModule } from "@nestjs/testing";
-import { SimSetController } from "./sim-set.controller";
-import { SimSetService } from "./sim-set.service";
-import { SimConfigService } from "../sim-config/sim-config.service";
-import { ResultService } from "../result/result.service";
 import { ModelService } from "../../services/model/model.service";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { SimSet } from "aethon-arion-db";
-import environment from "../../../../../env/environment.dev";
 import { DataSource } from "typeorm";
-import { ModuleMetadata } from "@nestjs/common";
-import { simSetControllerTestData } from "./sim-set.controller.test-data";
-import { SimSetDTO } from 'aethon-arion-pipeline';
+import { HttpException, ModuleMetadata } from "@nestjs/common";
+import { simSetControllerTestData } from "../data/sim-set.controller.test.data";
+import { SimSetController } from "../../endpoints/sim-set/sim-set.controller";
+import { SimSetService } from "../../endpoints/sim-set/sim-set.service";
+import { SimConfigService } from "../../endpoints/sim-config/sim-config.service";
+import { ResultService } from "../../endpoints/result/result.service";
 
 describe("SimSetController", () => {
     let controller: SimSetController;
     let dataSource: DataSource;
+    let env = environment();
+    
     const testingModuleConfig: ModuleMetadata = {
-        imports: [TypeOrmModule.forRoot(environment().database as any), TypeOrmModule.forFeature([SimSet])],
+        imports: [TypeOrmModule.forRoot(env.database), TypeOrmModule.forFeature([SimSet])],
         controllers: [SimSetController],
         providers: [SimSetService, SimConfigService, ResultService, ModelService]
     };
@@ -36,19 +37,20 @@ describe("SimSetController", () => {
         expect(result).toBeInstanceOf(Array<SimSet>);
     });
 
-    it("creates a basic sim set", async () => {
-        const create = await controller.create(simSetControllerTestData.basic);
-        expect(create).toBeDefined();
-        expect(create.type).toStrictEqual(simSetControllerTestData.basic.type);
-        expect(create.description).toStrictEqual(simSetControllerTestData.basic.description);
-    });
-
-    it("returns a single sim set", async () => {
+    it("creates, returns and deletes a sim set", async () => {
         const create = await controller.create(simSetControllerTestData.basic);
         expect(create).toBeDefined();
         const view = await controller.view(create.id);
         expect(view.type).toStrictEqual(simSetControllerTestData.basic.type);
         expect(view.description).toStrictEqual(simSetControllerTestData.basic.description);
+        const deleted = await controller.delete(create.id);
+        expect(deleted).toBeDefined();
+        expect(deleted).toStrictEqual(create.id);
+        try {
+            const viewAgain = await controller.view(create.id);
+        } catch (error) {
+            expect(error).toBeInstanceOf(HttpException);
+        }
     });
 
     afterEach(async () => {

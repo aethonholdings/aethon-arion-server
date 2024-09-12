@@ -18,7 +18,7 @@ export class OrgConfigController {
         description: "Optional - filter OrgConfigurations by the type of model",
         example: "C1"
     })
-    index(@Query("type") type: string): Promise<OrgConfigDTO[]> {
+    index(@Query("type") type?: string): Promise<OrgConfigDTO[]> {
         return this.orgConfigService.findAll(type);
     }
 

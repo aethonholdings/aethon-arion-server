@@ -8,8 +8,8 @@ export class SeedsController {
     constructor(private seedsService: SeedsService) {}
 
     // endpoint that fetches the static random number generator seeds for the simulation
-    @Get("seeds")
-    seeds(): Promise<number[]> {
+    @Get()
+    index(): Promise<number[]> {
         return this.seedsService.seeds();
     }
 }

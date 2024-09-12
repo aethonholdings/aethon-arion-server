@@ -16,7 +16,7 @@ export class StateSpaceController {
         description: "The id of the result to which the state space belongs",
         example: 1
     })
-    find(@Param("id") id: number): Promise<StateSpacePointDTO[]> {
+    index(@Param("id") id: number): Promise<StateSpacePointDTO[]> {
         return this.stateSpaceService.find(+id);
     }
 }

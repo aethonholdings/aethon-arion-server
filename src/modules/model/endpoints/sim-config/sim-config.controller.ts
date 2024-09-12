@@ -1,14 +1,14 @@
 import { Body, Controller, Delete, Get, Param, Post, Query } from "@nestjs/common";
 import { SimConfigService } from "./sim-config.service";
 import { ResultDTO, SimConfigDTO } from "aethon-arion-pipeline";
-import { Paginate, Paginated, PaginateQuery } from "nestjs-paginate";
+import { ApiPaginationQuery, Paginate, Paginated, PaginateQuery } from "nestjs-paginate";
 import { ApiBody, ApiParam, ApiQuery, ApiTags } from "@nestjs/swagger";
 import { SimConfigDTOCreate } from "../../dto/sim-config.dto";
 
 @Controller("sim-config")
 @ApiTags("SimConfig")
 export class SimConfigController {
-    constructor(private readonly simConfigService: SimConfigService) { }
+    constructor(private readonly simConfigService: SimConfigService) {}
 
     // endpoint that fetches an index of all SimConfigs, optionally by simulation set ID
     @Get()
@@ -19,14 +19,16 @@ export class SimConfigController {
         description: "The unique identifier of the simulation set to filter the SimConfigs by",
         example: 1
     })
-    @ApiQuery({
-        name: "paginateQuery",
-        type: Object,
-        description: "The pagination query to be applied to the results"
+    @ApiPaginationQuery({
+        defaultLimit: 100,
+        maxLimit: 100,
+        loadEagerRelations: false,
+        sortableColumns: ["avgPerformance"],
+        defaultSortBy: [["avgPerformance", "DESC"]]
     })
     index(
-        @Query("simSetId") simSetId: number,
-        @Paginate() paginateQuery: PaginateQuery
+        @Paginate() paginateQuery: PaginateQuery,
+        @Query("simSetId") simSetId?: number
     ): Promise<Paginated<SimConfigDTO>> {
         return this.simConfigService.findAll(simSetId, paginateQuery);
     }
@@ -69,18 +71,11 @@ export class SimConfigController {
 
     // endpoint that generates a SimConfig for a SimSet
     @Post()
-    @ApiParam({
-        name: "id",
-        type: Number,
-        description: "The unique identifier of the SimSet to generate a SimConfig for",
-        example: 1
-    })
     @ApiBody({
         type: SimConfigDTOCreate,
         description: "The parameters of the simulation to be created under the simulation set"
     })
     generateSimConfig(
-        @Param("id") simSetId: number,
         @Body() SimConfigDTOCreate: SimConfigDTOCreate
     ): Promise<SimConfigDTO> | null {
         return this.simConfigService.create(SimConfigDTOCreate);

@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import { Injectable, Logger } from "@nestjs/common";
-import { ModelService } from "src/modules/model/services/model/model.service";
+import { ModelService } from "../../services/model/model.service";
 
 @Injectable()
 export class SeedsService {
