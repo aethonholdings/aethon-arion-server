@@ -1,4 +1,4 @@
-import { environment } from "../env/test.env";
+import { environment } from "../environment/test.environment";
 import { Test, TestingModule } from "@nestjs/testing";
 import { OrgConfigController } from "../../endpoints/org-config/org-config.controller";
 import { DataSource } from "typeorm";
@@ -10,7 +10,7 @@ import { OrgConfig } from "aethon-arion-db";
 import { OrgConfigDTO } from "aethon-arion-pipeline";
 import { orgConfigControllerCreateTestData } from "../data/org-config.controller.test.data";
 
-describe("OrgConfigController", () => {
+describe("Model module: OrgConfigController", () => {
     let controller: OrgConfigController;
     let dataSource: DataSource;
     let env = environment();

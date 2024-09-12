@@ -25,7 +25,7 @@ export class ResultController {
         required: false,
         example: 1
     })
-    index(@Param("simSetId") simSetId: number, @Param("simConfigId") simConfigId: number): Promise<ResultDTO[]> {
+    index(@Param("simSetId") simSetId?: number, @Param("simConfigId") simConfigId?: number): Promise<ResultDTO[]> {
         return this.resultService.findAll({ simSetId: simSetId, simConfigId: simConfigId });
     }
 
@@ -47,8 +47,7 @@ export class ResultController {
         type: ResultDTOCreate,
         description: "The result to create"
     })
-
-    create(@Body() createResultDto: ResultDTOCreate): Promise<number> {
+    create(@Body() createResultDto: ResultDTOCreate): Promise<ResultDTO> {
         return this.resultService.create(createResultDto as ResultDTO);
     }
 }

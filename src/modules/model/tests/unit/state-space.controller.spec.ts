@@ -1,4 +1,4 @@
-import { environment } from "../env/test.env";
+import { environment } from "../environment/test.environment";
 import { Test, TestingModule } from "@nestjs/testing";
 import { StateSpaceController } from "../../endpoints/state-space/state-space.controller";
 import { DataSource } from "typeorm";
@@ -8,7 +8,7 @@ import { StateSpacePoint } from "aethon-arion-pipeline";
 import { StateSpaceService } from "../../endpoints/state-space/state-space.service";
 import { ModelService } from "../../services/model/model.service";
 
-describe("StateSpaceController", () => {
+describe("Model module: StateSpaceController", () => {
     let controller: StateSpaceController;
     let dataSource: DataSource;
     let env = environment();

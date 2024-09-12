@@ -117,7 +117,7 @@ export class SimConfigService {
                         randomStreamType: simConfigDTO?.randomStreamType
                             ? simConfigDTO?.randomStreamType
                             : this._environment.randomStreamType,
-                        days: this._environment.simulationDays,
+                        days: simConfigDTO?.days ? simConfigDTO.days : this._environment.simulationDays,
                         converged: false,
                         running: false,
                         state: "pending"

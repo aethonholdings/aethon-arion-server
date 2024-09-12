@@ -1,5 +1,3 @@
-import { SimSetDTOCreate } from "../../dto/sim-set.dto";
-
-export const simSetControllerTestData: { [key: string]: SimSetDTOCreate } = {
+export const simSetControllerTestData = {
     basic: { type: "C1", description: "Basic test" }
 };

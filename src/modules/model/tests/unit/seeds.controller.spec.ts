@@ -5,7 +5,7 @@ import { ModuleMetadata } from "@nestjs/common";
 import { SeedsService } from "../../endpoints/seeds/seeds.service";
 import { ModelService } from "../../services/model/model.service";
 
-describe("SeedsController", () => {
+describe("Model module: SeedsController", () => {
     let controller: SeedsController;
     let dataSource: DataSource;
 

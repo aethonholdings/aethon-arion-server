@@ -18,7 +18,7 @@ export class ResultService {
         this._environment = environment();
     }
 
-    create(resultDto: ResultDTO): Promise<number> {
+    create(resultDto: ResultDTO): Promise<ResultDTO> {
         return this.dataSource
             .getRepository(SimConfig)
             .findOneOrFail({
@@ -79,7 +79,7 @@ export class ResultService {
             .then(([simConfig, simSet, result]) => {
                 // save the state space if applicable
                 if (this._environment.dev) this._logger.log("Result saved with id: " + result.id);
-                if (this._environment?.storeStateSpace) {
+                if (this._environment?.storeStateSpace && resultDto.stateSpace && resultDto.stateSpace.length > 0) {
                     if (this._environment.dev) this._logger.log("Saving state space asyncronously");
                     resultDto.stateSpace.forEach((stateSpacePointDto) => {
                         stateSpacePointDto.resultId = result.id;
@@ -92,7 +92,7 @@ export class ResultService {
                         });
                 }
                 if (this._environment.dev) this._logger.log("Result " + result.id + " successfully created");
-                return result.id;
+                return result;
             })
             .catch((err) => {
                 throw this.modelService.error(err, this._logger);

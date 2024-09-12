@@ -75,7 +75,7 @@ export class SimConfigController {
         type: SimConfigDTOCreate,
         description: "The parameters of the simulation to be created under the simulation set"
     })
-    generateSimConfig(
+    create(
         @Body() SimConfigDTOCreate: SimConfigDTOCreate
     ): Promise<SimConfigDTO> | null {
         return this.simConfigService.create(SimConfigDTOCreate);

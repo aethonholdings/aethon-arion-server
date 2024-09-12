@@ -1,4 +1,4 @@
-import { environment } from "../env/test.env";
+import { environment } from "../environment/test.environment";
 import { Test, TestingModule } from "@nestjs/testing";
 import { ResultController } from "../../endpoints/result/result.controller";
 import { ResultService } from "../../endpoints/result/result.service";
@@ -8,7 +8,7 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { Result } from "aethon-arion-db";
 import { ModelService } from "../../services/model/model.service";
 
-describe("ResultsController", () => {
+describe("Model module: ResultsController", () => {
     let controller: ResultController;
     let dataSource: DataSource;
     let env = environment();

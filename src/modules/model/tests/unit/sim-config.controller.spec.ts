@@ -1,4 +1,4 @@
-import { environment } from "../env/test.env";
+import { environment } from "../environment/test.environment";
 import { Test, TestingModule } from "@nestjs/testing";
 import { DataSource } from "typeorm";
 import { TypeOrmModule } from "@nestjs/typeorm";
@@ -12,7 +12,7 @@ import { ModelService } from "../../services/model/model.service";
 import { indexTestQuery } from "../data/sim-config.controller.test.data";
 import { nodeId } from "../data/result.controller.test.data";
 
-describe("SimConfigController", () => {
+describe("Model module: SimConfigController", () => {
     let controller: SimConfigController;
     let dataSource: DataSource;
     let env = environment();
