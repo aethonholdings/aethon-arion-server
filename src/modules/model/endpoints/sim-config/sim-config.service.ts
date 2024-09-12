@@ -36,12 +36,11 @@ export class SimConfigService {
                     simConfig.simSet.save().then(() => {
                         if (this._environment.dev) this._logger.log("SimSet updated");
                     });
-                    return simConfig.save();
+                    return simConfig.save().then((simConfig) => {
+                        if (this._environment.dev) this._logger.log("SimConfig updated");
+                        return simConfig;
+                    });
                 }
-            })
-            .then((simConfig) => {
-                if (this._environment.dev) this._logger.log("SimConfig updated");
-                return simConfig;
             })
             .catch((err) => {
                 throw this.modelService.error(err, this._logger);
@@ -137,6 +136,20 @@ export class SimConfigService {
     }
 
     delete(id: number): Promise<number> {
-        return this.modelService.deleteRecord(id, this._logger, this.dataSource.getRepository(SimConfig));
+        try {
+            const repository = this.dataSource.getRepository(SimConfig);
+            // adjust the simset simconfig counter
+            return repository
+                .findOneOrFail({ where: { id: id } })
+                .then((simConfig) => {
+                    simConfig.simSet.simConfigCount--;
+                    return simConfig.simSet.save();
+                })
+                .then(() => {
+                    return this.modelService.deleteRecord(id, this._logger, this.dataSource.getRepository(SimConfig));
+                });
+        } catch (err) {
+            throw this.modelService.error(err, this._logger);
+        }
     }
 }

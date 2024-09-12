@@ -53,19 +53,22 @@ export class ResultService {
                 if (simConfig.runCount >= 2 && simConfig.runCount >= this._environment.minRuns) {
                     if (this._environment.dev) this._logger.log("Checking convergence");
                     if (currentStdDev > 0) {
-                        const percentChange = (simConfig.stdDevPerformance - currentStdDev) / currentStdDev;
+                        const percentChange = Math.abs((simConfig.stdDevPerformance - currentStdDev) / currentStdDev);
                         converged = percentChange < this._environment.convergenceMargin ? true : false;
                     } else {
                         converged = true;
                     }
                 }
                 if (converged) {
+                    if (this._environment.dev) this._logger.log("Simulation converged");
                     simConfig.state = "completed";
                     simConfig.simSet.state = "completed";
                     if (!simConfig.converged) {
-                        simConfig.simSet.completedSimConfigCount++;
+                        if (this._environment.dev) this._logger.log("Marking as completed");
                         simConfig.end = new Date();
                         simConfig.durationSec = (simConfig.end.getTime() - simConfig.start.getTime()) / 1000;
+                        simConfig.simSet.completedSimConfigCount++;
+                        simConfig.converged = true;
                     }
                 }
 
