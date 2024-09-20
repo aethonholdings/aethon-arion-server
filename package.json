@@ -1,6 +1,6 @@
 {
   "name": "aethon-arion-server",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "The Arion simulation API server",
   "repository": "github:aethonholdings/aethon-arion-server",
   "author": "Konstantinos Dimitriou",
