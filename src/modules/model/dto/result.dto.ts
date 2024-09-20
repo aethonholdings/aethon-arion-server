@@ -1,9 +1,20 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, PickType } from "@nestjs/swagger";
 import { StateSpacePointDTOCreate } from "./state-space.dto";
-import { IsArray, IsDate, IsNumber, IsOptional, IsString, ValidateNested } from "class-validator";
+import { IsArray, IsDate, IsNumber, IsObject, IsOptional, IsString, ValidateNested } from "class-validator";
 import { Transform, Type } from "class-transformer";
+import { ConfiguratorParamsDTO, SimConfigDTO } from "aethon-arion-pipeline";
+import { ConfiguratorParamsDTOGet } from "./configurator-param.dto";
 
-export class ResultDTOCreate {
+export class ResultDTOGet {
+    @IsNumber()
+    @ApiProperty({
+        name: "id",
+        type: Number,
+        description: "The unique identifier of the simulation result",
+        example: 1
+    })
+    id: number;
+
     @IsNumber()
     @ApiProperty({
         name: "simConfigId",
@@ -12,6 +23,33 @@ export class ResultDTOCreate {
         example: 1
     })
     simConfigId: number;
+
+    @IsNumber()
+    @ApiProperty({
+        name: "orgConfigId",
+        type: Number,
+        description: "The ID of the organization configuration that produced this result",
+        example: 1
+    })
+    orgConfigId: number;
+
+    @IsNumber()
+    @ApiProperty({
+        name: "simSetId",
+        type: Number,
+        description: "The unique identifier of the simulation set that produced this result",
+        example: 1
+    })
+    simSetId: number;
+
+    @IsObject()
+    @ApiProperty({
+        name: "simConfig",
+        type: Object,
+        description: "The simulation configuration that produced this result",
+        example: {}
+    })
+    simConfig: SimConfigDTO;
 
     @IsNumber()
     @ApiProperty({
@@ -136,4 +174,91 @@ export class ResultDTOCreate {
         example: []
     })
     stateSpace?: StateSpacePointDTOCreate[];
+
+    @IsNumber()
+    @ApiProperty({
+        name: "performance",
+        type: Number,
+        required: false,
+        description: "The value of the final performance metric of the result",
+        example: 0.85
+    })
+    performance?: number;
+
+
+    @IsNumber()
+    @ApiProperty({
+        name: "priorityIntensity",
+        type: Number,
+        required: false,
+        description: "The sum of the squares of the values of the final priority tensor of the result",
+        example: 0.85
+    })
+    priorityIntensity: number;
+
+    @IsNumber()
+    @ApiProperty({
+        name: "agentCount",
+        type: Number,
+        required: false,
+        description: "The number of agents in the simulation",
+        example: 10
+    })
+    agentCount: number;
+
+    @IsString()
+    @ApiProperty({
+        name: "orgConfigType",
+        type: String,
+        required: false,
+        description: "The type of organization configuration that produced this result",
+        example: "C1"
+    })
+    orgConfigType?: string;
+
+    @IsString()
+    @ApiProperty({
+        name: "configuratorName",
+        type: String,
+        required: false,
+        description: "The name of the configurator that produced this result",
+        example: "C1Configurator"})
+    configuratorName: string;
+
+    @IsObject()
+    @ApiProperty({
+        name: "configuratorParams",
+        type: ConfiguratorParamsDTOGet,
+        description: "The parameters of the configurator that produced this result",
+        example: {
+            configuratorName: "C1Configurator",
+            data: {
+                spans: 1,
+                layers: 1,
+                gains: { influence: 0.000001, judgment: 0.00001, incentive: 1e-8 },
+                graph: "teams",
+                actionStateProbability: 0.85,
+                matrixInit: { influence: "null", judgment: "random", incentive: "purposeful" },
+                reporting: { unitPayroll: 1, unitPrice: 1 },
+                board: { controlStep: false }
+            }
+        }
+    })
+    configuratorParams: ConfiguratorParamsDTO;
 }
+
+export class ResultDTOCreate extends PickType(ResultDTOGet, [
+    "simConfigId",
+    "runCount",
+    "nodeId",
+    "start",
+    "end",
+    "clockTick",
+    "durationSec",
+    "agentStates",
+    "board",
+    "plant",
+    "reporting",
+    "priorityTensor",
+    "stateSpace"
+]) {}

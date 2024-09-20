@@ -1,8 +1,35 @@
-import { ApiProperty } from "@nestjs/swagger"
-import { IsArray, IsNumber } from "class-validator"
+import { ApiProperty, PickType } from "@nestjs/swagger"
+import { ResultDTO } from "aethon-arion-pipeline";
+import { IsArray, IsNumber, IsObject } from "class-validator"
 
 
-export class StateSpacePointDTOCreate {
+export class StateSpacePointDTOGet {
+    @IsNumber()
+    @ApiProperty({
+        name: "id",
+        type: Number,
+        description: "The unique identifier of the state space point",
+        example: 1
+    })
+    id: number
+
+    @IsNumber()
+    @ApiProperty({
+        name: "resultId",
+        type: Number,
+        description: "The unique identifier of the result to which the state space point belongs",
+        example: 1
+    })
+    resultId: number;
+
+    @IsObject()
+    @ApiProperty({
+        name: "result",
+        type: Object,
+        description: "The result to which the state space point belongs",
+    })
+    result: ResultDTO
+
     @IsNumber()
     @ApiProperty({
         name: "clockTick",
@@ -65,3 +92,5 @@ export class StateSpacePointDTOCreate {
     })
     priorityTensor: number[][][]
 }
+
+export class StateSpacePointDTOCreate extends PickType(StateSpacePointDTOGet, ["clockTick", "board", "agentStates", "plant", "reporting", "priorityTensor"]) {}

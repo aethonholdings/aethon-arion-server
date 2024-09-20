@@ -1,7 +1,7 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, PickType } from "@nestjs/swagger";
 import { IsObject, IsString } from "class-validator";
 
-export class ConfiguratorParamsDTOCreate {
+export class ConfiguratorParamsDTOGet {
     @IsString()
     @ApiProperty({
         name: "configuratorName",
@@ -29,3 +29,5 @@ export class ConfiguratorParamsDTOCreate {
     })
     data: any;
 }
+
+export class ConfiguratorParamsDTOCreate extends PickType(ConfiguratorParamsDTOGet, ["configuratorName", "data"]) {}

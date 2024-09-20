@@ -50,7 +50,7 @@ npm run start:dev
 
 ## API
 
-The code implements the following API.
+The code implements the API specified under `./docs/api`.
 
 At present there is no node authentication, JWT and https so the application is meant to be run on a local rather than public network.  
 

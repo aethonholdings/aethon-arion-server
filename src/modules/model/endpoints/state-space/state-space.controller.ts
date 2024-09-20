@@ -1,7 +1,7 @@
-import { StateSpacePointDTO } from "aethon-arion-pipeline";
 import { Controller, Get, Param } from "@nestjs/common";
 import { StateSpaceService } from "./state-space.service";
 import { ApiParam, ApiTags } from "@nestjs/swagger";
+import { StateSpacePointDTOGet } from "../../dto/state-space.dto";
 
 @Controller("state-space")
 @ApiTags("StateSpace")
@@ -16,7 +16,7 @@ export class StateSpaceController {
         description: "The id of the result to which the state space belongs",
         example: 1
     })
-    index(@Param("id") id: number): Promise<StateSpacePointDTO[]> {
-        return this.stateSpaceService.find(+id);
+    index(@Param("id") id: number): Promise<StateSpacePointDTOGet[]> {
+        return this.stateSpaceService.find(+id) as Promise<StateSpacePointDTOGet[]>;
     }
 }

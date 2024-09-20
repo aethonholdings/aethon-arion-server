@@ -1,9 +1,9 @@
 import { Body, Controller, Delete, Get, Param, Post, Query } from "@nestjs/common";
-import { SimConfigService } from "./sim-config.service";
-import { ResultDTO, SimConfigDTO } from "aethon-arion-pipeline";
-import { ApiPaginationQuery, Paginate, Paginated, PaginateQuery } from "nestjs-paginate";
-import { ApiBody, ApiParam, ApiQuery, ApiTags } from "@nestjs/swagger";
-import { SimConfigDTOCreate } from "../../dto/sim-config.dto";
+import { simConfigPaginationConfig, SimConfigService } from "./sim-config.service";
+import { ApiOkPaginatedResponse, ApiPaginationQuery, Paginate, Paginated, PaginateQuery } from "nestjs-paginate";
+import { ApiBody, ApiOkResponse, ApiParam, ApiQuery, ApiTags } from "@nestjs/swagger";
+import { SimConfigDTOCreate, SimConfigDTOGet } from "../../dto/sim-config.dto";
+import { ResultDTOGet } from "../../dto/result.dto";
 
 @Controller("sim-config")
 @ApiTags("SimConfig")
@@ -19,18 +19,13 @@ export class SimConfigController {
         description: "The unique identifier of the simulation set to filter the SimConfigs by",
         example: 1
     })
-    @ApiPaginationQuery({
-        defaultLimit: 100,
-        maxLimit: 100,
-        loadEagerRelations: false,
-        sortableColumns: ["avgPerformance"],
-        defaultSortBy: [["avgPerformance", "DESC"]]
-    })
+    @ApiPaginationQuery(simConfigPaginationConfig)
+    @ApiOkPaginatedResponse(SimConfigDTOGet, simConfigPaginationConfig)
     index(
         @Paginate() paginateQuery: PaginateQuery,
         @Query("simSetId") simSetId?: number
-    ): Promise<Paginated<SimConfigDTO>> {
-        return this.simConfigService.findAll(simSetId, paginateQuery);
+    ): Promise<Paginated<SimConfigDTOGet>> {
+        return this.simConfigService.findAll(simSetId, paginateQuery) as Promise<Paginated<SimConfigDTOGet>>;
     }
 
     // endpoint that fetches the next SimConfig to be run
@@ -41,8 +36,12 @@ export class SimConfigController {
         description: "The identifier of the node requesting the next SimConfig",
         example: "e221a974cfc069b0b8ace096c1153ca3eb4707344ae50fe2f4529003fab2c4e2:649566"
     })
-    next(@Query("nodeId") nodeId: string): Promise<SimConfigDTO> {
-        return this.simConfigService.next(nodeId);
+    @ApiOkResponse({
+        type: SimConfigDTOGet,
+        description: "The next simconfig to be executed by a node"
+    })
+    next(@Query("nodeId") nodeId: string): Promise<SimConfigDTOGet> {
+        return this.simConfigService.next(nodeId) as Promise<SimConfigDTOGet>;
     }
 
     // endpoint that fetches a single SimConfig by ID
@@ -53,8 +52,12 @@ export class SimConfigController {
         description: "The unique identifier of the SimConfig to be fetched",
         example: 1
     })
-    view(@Param("id") id: number): Promise<SimConfigDTO> {
-        return this.simConfigService.findOne(id);
+    @ApiOkResponse({
+        type: SimConfigDTOGet,
+        description: "The SimConfig object fetched by ID"
+    })
+    view(@Param("id") id: number): Promise<SimConfigDTOGet> {
+        return this.simConfigService.findOne(id) as Promise<SimConfigDTOGet>;
     }
 
     // endpoint that fetches the results of a SimConfig by ID
@@ -65,8 +68,13 @@ export class SimConfigController {
         description: "The unique identifier of the SimConfig to fetch the results for",
         example: 1
     })
-    results(@Param("id") id: number): Promise<ResultDTO[]> {
-        return this.simConfigService.findResults(id);
+    @ApiOkResponse({
+        type: ResultDTOGet,
+        isArray: true,
+        description: "An array of Result objects for the specified simulation configuration"
+    })
+    results(@Param("id") id: number): Promise<ResultDTOGet[]> {
+        return this.simConfigService.findResults(id) as Promise<ResultDTOGet[]>;
     }
 
     // endpoint that generates a SimConfig for a SimSet
@@ -75,10 +83,14 @@ export class SimConfigController {
         type: SimConfigDTOCreate,
         description: "The parameters of the simulation to be created under the simulation set"
     })
+    @ApiOkResponse({
+        type: SimConfigDTOGet,
+        description: "The SimConfig object created by the request"
+    })
     create(
         @Body() SimConfigDTOCreate: SimConfigDTOCreate
-    ): Promise<SimConfigDTO> | null {
-        return this.simConfigService.create(SimConfigDTOCreate);
+    ): Promise<SimConfigDTOGet> {
+        return this.simConfigService.create(SimConfigDTOCreate) as Promise<SimConfigDTOGet>;
     }
 
     // endpoint that deletes a SimConfig by ID
@@ -88,6 +100,10 @@ export class SimConfigController {
         type: Number,
         description: "The ID of the SimConfig to be deleted",
         example: 1
+    })
+    @ApiOkResponse({
+        type: Number,
+        description: "The ID of the SimConfig deleted"
     })
     delete(@Param("id") id: number): Promise<number> {
         return this.simConfigService.delete(id);

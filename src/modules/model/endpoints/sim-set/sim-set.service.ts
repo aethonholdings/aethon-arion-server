@@ -8,6 +8,7 @@ import { ServerEnvironment } from "../../../../../src/interfaces/interfaces";
 import { Paginated, PaginateQuery } from "nestjs-paginate";
 import { ResultService } from "../result/result.service";
 import { ModelService } from "../../services/model/model.service";
+import { SimSetDTOCreate } from "../../dto/sim-set.dto";
 
 @Injectable()
 export class SimSetService {
@@ -55,7 +56,7 @@ export class SimSetService {
         });
     }
 
-    create(simSet: SimSetDTO): Promise<SimSetDTO> {
+    create(simSet: SimSetDTOCreate): Promise<SimSetDTO> {
         try {
             if (this.modelService.getModelNames().includes(simSet.type)) {
                 return this.dataSource.getRepository(SimSet).save(simSet);

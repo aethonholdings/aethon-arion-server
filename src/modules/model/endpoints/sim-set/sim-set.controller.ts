@@ -1,9 +1,11 @@
 import { Body, Controller, Delete, Get, Param, Post, Query } from "@nestjs/common";
 import { SimSetService } from "./sim-set.service";
-import { ResultDTO, SimConfigDTO, SimSetDTO } from "aethon-arion-pipeline";
-import { Paginate, Paginated } from "nestjs-paginate";
-import { ApiBody, ApiParam, ApiTags } from "@nestjs/swagger";
-import { SimSetDTOCreate } from "../../../../../src/modules/model/dto/sim-set.dto";
+import { ApiOkPaginatedResponse, ApiPaginationQuery, Paginate, PaginateConfig, Paginated } from "nestjs-paginate";
+import { ApiBody, ApiOkResponse, ApiParam, ApiTags } from "@nestjs/swagger";
+import { SimSetDTOCreate, SimSetDTOGet } from "../../../../../src/modules/model/dto/sim-set.dto";
+import { ResultDTOGet } from "../../dto/result.dto";
+import { SimConfigDTOGet } from "../../dto/sim-config.dto";
+import { simConfigPaginationConfig } from "../sim-config/sim-config.service";
 
 @Controller("sim-set")
 @ApiTags("SimSet")
@@ -12,15 +14,21 @@ export class SimSetController {
 
     // endpoint that fetches an index of all SimSets
     @Get()
-    index(@Query() query?: any): Promise<SimSetDTO[]> {
-        return this.simSetService.findAll(query);
+    @ApiOkResponse({
+        type: SimSetDTOGet,
+        isArray: true,
+        description: "An array of all simulation sets, subject to a query filter"
+    })
+    index(@Query() query?: any): Promise<SimSetDTOGet[]> {
+        return this.simSetService.findAll(query) as Promise<SimSetDTOGet[]>;
     }
 
     // endpoint that fetches the details of a single SimSet based on ID
     @Get(":id")
     @ApiParam({ name: "id", type: Number, description: "The unique identifier of the simulation set", example: 1 })
-    view(@Param("id") id: number): Promise<SimSetDTO> {
-        return this.simSetService.findOne(id);
+    @ApiOkResponse({ type: SimSetDTOCreate, description: "The details of the simulation set" })
+    view(@Param("id") id: number): Promise<SimSetDTOCreate> {
+        return this.simSetService.findOne(id) as Promise<SimSetDTOCreate>;
     }
 
     // endpoint that generates a new SimSet
@@ -29,8 +37,9 @@ export class SimSetController {
         type: SimSetDTOCreate,
         examples: { example1: { value: { description: "Simulation set for testing the new model", type: "C1" } } }
     })
-    create(@Body() simSet: SimSetDTOCreate): Promise<SimSetDTO> {
-        return this.simSetService.create(simSet as SimSetDTO);
+    @ApiOkResponse({ type: SimSetDTOGet, description: "The newly created simulation set" })
+    create(@Body() simSet: SimSetDTOCreate): Promise<SimSetDTOGet> {
+        return this.simSetService.create(simSet) as Promise<SimSetDTOGet>;
     }
 
     // endpoint that fetches an array of the Results of a SimSet
@@ -41,8 +50,13 @@ export class SimSetController {
         description: "The unique identifier of the simulation set to fetch the results for",
         example: 1
     })
-    results(@Param("id") simSetId: number): Promise<ResultDTO[]> {
-        return this.simSetService.findResults(simSetId);
+    @ApiOkResponse({
+        type: ResultDTOGet,
+        isArray: true,
+        description: "An array of Result objects for the specified simulation set"
+    })
+    results(@Param("id") simSetId: number): Promise<ResultDTOGet[]> {
+        return this.simSetService.findResults(simSetId) as Promise<ResultDTOGet[]>;
     }
 
     // endpoint that fetches an array of SimConfigs for a SimSet
@@ -53,8 +67,10 @@ export class SimSetController {
         description: "The unique identifier of the simulation set to fetch the SimConfigs for",
         example: 1
     })
-    simConfigs(@Param("id") simSetId: number, @Paginate() paginateQuery): Promise<Paginated<SimConfigDTO>> {
-        return this.simSetService.findSimConfigs(simSetId, paginateQuery);
+    @ApiPaginationQuery(simConfigPaginationConfig)
+    @ApiOkPaginatedResponse(SimConfigDTOGet, simConfigPaginationConfig)
+    simConfigs(@Param("id") simSetId: number, @Paginate() paginateQuery): Promise<Paginated<SimConfigDTOGet>> {
+        return this.simSetService.findSimConfigs(simSetId, paginateQuery) as Promise<Paginated<SimConfigDTOGet>>;
     }
 
     // endpoint that deletes a SimSet
@@ -65,6 +81,7 @@ export class SimSetController {
         description: "The unique identifier of the simulation set to be deleted",
         example: 1
     })
+    @ApiOkResponse({ type: Number, description: "The ID of the simulation set deleted" })
     delete(@Param("id") id: number): Promise<number> {
         return this.simSetService.delete(id);
     }

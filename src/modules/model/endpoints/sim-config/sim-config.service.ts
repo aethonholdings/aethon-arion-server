@@ -4,9 +4,17 @@ import { DataSource } from "typeorm";
 import { OrgConfig, Result, SimConfig, SimSet } from "aethon-arion-db";
 import { ResultDTO, SimConfigDTO } from "aethon-arion-pipeline";
 import { ServerEnvironment } from "src/interfaces/interfaces";
-import { paginate, Paginated, PaginateQuery } from "nestjs-paginate";
+import { paginate, PaginateConfig, Paginated, PaginateQuery } from "nestjs-paginate";
 import { ModelService } from "../../services/model/model.service";
 import { SimConfigDTOCreate } from "../../dto/sim-config.dto";
+
+export const simConfigPaginationConfig: PaginateConfig<SimConfig> = {
+    defaultLimit: 100,
+    maxLimit: 100,
+    loadEagerRelations: false,
+    sortableColumns: ["avgPerformance"],
+    defaultSortBy: [["avgPerformance", "DESC"]]
+}
 
 @Injectable()
 export class SimConfigService {
@@ -67,13 +75,7 @@ export class SimConfigService {
             .where("simConfig.simSetId = :simSetId", { simSetId: simSetId })
             .addOrderBy("simConfig.avgPerformance", "DESC")
             .setFindOptions({ loadEagerRelations: false, relationLoadStrategy: "query" });
-        return paginate(paginateQuery, query, {
-            defaultLimit: 100,
-            maxLimit: 100,
-            loadEagerRelations: false,
-            sortableColumns: ["avgPerformance"],
-            defaultSortBy: [["avgPerformance", "DESC"]]
-        })
+        return paginate(paginateQuery, query, simConfigPaginationConfig)
             .then((paginated) => {
                 return paginated as Paginated<SimConfigDTO>;
             })
