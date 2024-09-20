@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { StateSpacePointDTOCreate } from "./state-space.dto";
-import { IsArray, IsDate, IsISO8601, IsNumber, IsOptional, IsString, ValidateNested } from "class-validator";
+import { IsArray, IsDate, IsNumber, IsOptional, IsString, ValidateNested } from "class-validator";
 import { Transform, Type } from "class-transformer";
 
 export class ResultDTOCreate {

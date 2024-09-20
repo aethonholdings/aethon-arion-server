@@ -1,8 +1,8 @@
 import { Body, Controller, Delete, Get, Param, Post, Query } from "@nestjs/common";
 import { OrgConfigService } from "./org-config.service";
-import { OrgConfigDTO } from "aethon-arion-pipeline";
-import { ApiBody, ApiParam, ApiQuery, ApiTags } from "@nestjs/swagger";
+import { ApiBody, ApiOkResponse, ApiParam, ApiQuery, ApiTags } from "@nestjs/swagger";
 import { ConfiguratorParamsDTOCreate } from "../../dto/configurator-param.dto";
+import { OrgConfigDTOGet } from "../../dto/org-config.dto";
 
 @Controller("org-config")
 @ApiTags("OrgConfig")
@@ -18,8 +18,13 @@ export class OrgConfigController {
         description: "Optional - filter OrgConfigurations by the type of model",
         example: "C1"
     })
-    index(@Query("type") type?: string): Promise<OrgConfigDTO[]> {
-        return this.orgConfigService.findAll(type);
+    @ApiOkResponse({
+        type: OrgConfigDTOGet,
+        isArray: true,
+        description: "An array of OrgConfig objects mathing the specified type, if supplied"
+    })
+    index(@Query("type") type?: string): Promise<OrgConfigDTOGet[]> {
+        return this.orgConfigService.findAll(type) as Promise<OrgConfigDTOGet[]>;
     }
 
     // endpoint that fetches a single OrgConfig by ID
@@ -30,18 +35,26 @@ export class OrgConfigController {
         description: "The ID of the OrgConfig to be fetched",
         example: 1
     })
-    view(@Param("id") id: number): Promise<OrgConfigDTO> {
-        return this.orgConfigService.findOne(id);
+    @ApiOkResponse({
+        type: OrgConfigDTOGet,
+        description: "The OrgConfig object matching the specified ID"
+    })
+    view(@Param("id") id: number): Promise<OrgConfigDTOGet> {
+        return this.orgConfigService.findOne(id) as Promise<OrgConfigDTOGet>;
     }
 
     // endpoint that creates a new OrgConfig based on the specified model Configurator input parameters
     @Post()
     @ApiBody({
         type: ConfiguratorParamsDTOCreate,
-        description: "The parameters required to generate the OrgConfig, based on the selected model Configurator class",
+        description: "The parameters required to generate the OrgConfig, based on the selected model Configurator class"
     })
-    create(@Body() configuratorParamsDTO: ConfiguratorParamsDTOCreate): Promise<OrgConfigDTO> {
-        return this.orgConfigService.create(configuratorParamsDTO);
+    @ApiOkResponse({
+        type: OrgConfigDTOGet,
+        description: "The newly created OrgConfig object"
+    })
+    create(@Body() configuratorParamsDTO: ConfiguratorParamsDTOCreate): Promise<OrgConfigDTOGet> {
+        return this.orgConfigService.create(configuratorParamsDTO) as Promise<OrgConfigDTOGet>;
     }
 
     // endpoint that deletes an OrgConfig by ID
@@ -50,6 +63,11 @@ export class OrgConfigController {
         name: "id",
         type: Number,
         description: "The ID of the OrgConfig to be deleted",
+        example: 1
+    })
+    @ApiOkResponse({
+        type: Number,
+        description: "The ID of the OrgConfig deleted",
         example: 1
     })
     delete(@Param("id") id: number): Promise<number> {
