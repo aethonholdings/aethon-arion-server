@@ -14,7 +14,7 @@ export const simConfigPaginationConfig: PaginateConfig<SimConfig> = {
     loadEagerRelations: false,
     sortableColumns: ["avgPerformance"],
     defaultSortBy: [["avgPerformance", "DESC"]]
-}
+};
 
 @Injectable()
 export class SimConfigService {
@@ -109,7 +109,7 @@ export class SimConfigService {
 
         return queries
             .then(([simSet, orgConfig]) => {
-                if (orgConfig.type === simSet.type) {
+                if (simSet && orgConfig && orgConfig.type === simSet.type) {
                     simSet.simConfigCount++;
                     const simConfig = this.dataSource.getRepository(SimConfig).save({
                         simSet: simSet,

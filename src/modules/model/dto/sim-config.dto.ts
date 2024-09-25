@@ -82,18 +82,22 @@ export class SimConfigDTOGet {
     runCount: number;
 
     @IsNumber()
+    @IsOptional()
     @ApiProperty({
         name: "days",
         type: Number,
+        required: false,
         description: "The number of simulation 'days' to run the simulation for.",
         example: 100
     })
     days: number;
 
     @IsIn(["static", "random"])
+    @IsOptional()
     @ApiProperty({
         name: "randomStreamType",
         type: "string",
+        required: false,
         enum: ["static", "random"],
         description:
             "The type of random stream to use for the simulation. 'static' uses a deterministic sequence from fixed random seeds and is useful for testing, 'random' uses Math.random().",

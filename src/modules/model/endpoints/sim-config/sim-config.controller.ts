@@ -88,9 +88,9 @@ export class SimConfigController {
         description: "The SimConfig object created by the request"
     })
     create(
-        @Body() SimConfigDTOCreate: SimConfigDTOCreate
+        @Body() simConfigDTOCreate: SimConfigDTOCreate
     ): Promise<SimConfigDTOGet> {
-        return this.simConfigService.create(SimConfigDTOCreate) as Promise<SimConfigDTOGet>;
+        return this.simConfigService.create(simConfigDTOCreate) as Promise<SimConfigDTOGet>;
     }
 
     // endpoint that deletes a SimConfig by ID
