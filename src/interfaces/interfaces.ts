@@ -12,6 +12,10 @@ export interface ServerEnvironment {
         database: string;
         synchronize: boolean;
     };
+    redis: {
+        url: string,
+        ttl: number
+    };
     storeStateSpace: boolean;
     convergenceMargin: number;
     minRuns: number;

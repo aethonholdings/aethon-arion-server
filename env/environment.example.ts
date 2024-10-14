@@ -14,6 +14,10 @@ export default () =>
             database: "arion",
             synchronize: false,
         },
+        redis: {
+            url: "redis://***.***.***.***:6379",
+            ttl: 60
+        },
         storeStateSpace: true,
         convergenceMargin: 0.001,
         minRuns: 10,
