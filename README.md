@@ -18,25 +18,29 @@ The `default` function in these environmnet files should return an object under 
 
 ```
 export interface ServerEnvironment {
-    name: string;               // the name of the environment e.g. dev
-    dev: boolean;               // flag on whether this is development environment (enables extra logging)
-    listen: number;             // port for the server to listen to
-    database: {                 // typeORM database parameters
-        type: string;           // database type e.g. mysql
-        host: string;           // hostname for database server
-        port: number;           // database server port 
-        username: string;       // database username
-        password: string;       // database password
-        database: string;       // the name of the database
-        synchronize: boolean;   // whether to synchronise tables and delete the database on server startup; must be false for production
-        logging:                // enable database SQL query logging, useful for debugging/ development
-        entities: [__dirname + "/../**/*.entity{.ts,.js}"]  // required in the dev environment to run jest tests
+    root: {
+        name: string;                               // the name of the environment e.g. dev
+        dev: boolean;                               // flag on whether this is development environment (enables extra logging)
+        listen: number;                             // port for the server to listen to
+    }
+    database: {                                     // typeORM database parameters
+        type: string;                               // database type e.g. mysql
+        host: string;                               // hostname for database server
+        port: number;                               // database server port 
+        username: string;                           // database username
+        password: string;                           // database password
+        database: string;                           // the name of the database
+        synchronize: boolean;                       // whether to synchronise tables and delete the database on server startup; must be false for production
+        logging?: boolean                           // enable database SQL query logging, useful for debugging/ development
+        entities: string[]                          // entity filesystem absolute path; required in the dev environment to run jest tests
     };
-    storeStateSpace: boolean;   // whether the server saves state space data by default
-    convergenceMargin: number;  // set the standard deviation estimation change percent margin to test for convergence
-    minRuns: number;            // minimum runs to perform per simulation config
-    randomStreamType: "static" | "random";  // default random stream generator; static is useful for testing
-    simulationDays: number;     // default number of simulation days
+    options: {
+        storeStateSpace: boolean;                   // whether the server saves state space data by default
+        convergenceMargin: number;                  // set the standard deviation estimation change percent margin to test for convergence
+        minRuns: number;                            // minimum runs to perform per simulation config
+        randomStreamType: "static" | "random";      // default random stream generator; static is useful for testing
+        simulationDays: number;                     // default number of simulation days
+    }
 }
 ```
 

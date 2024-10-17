@@ -1,15 +1,12 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { TypeOrmModule } from "@nestjs/typeorm";
-import { CacheModule } from "@nestjs/cache-manager"; 
 import { DatabaseModule } from "../database/database.module";
 import { ModelModule } from "../model/model.module";
 import { DatabaseService } from "../database/database.service";
-import { RedisClientOptions } from "redis";
 import environment from "../../../env/environment";
 
 const env = environment();
-const redisStore = require('cache-manager-redis-store').redisStore;
 
 @Module({
     imports: [
@@ -26,11 +23,6 @@ const redisStore = require('cache-manager-redis-store').redisStore;
             database: env.database.database,
             synchronize: env.database.synchronize,
             autoLoadEntities: true
-        }),
-        CacheModule.register<RedisClientOptions>({
-            store: redisStore,
-            url: environment().redis.url,
-            isGlobal: true
         }),
         DatabaseModule,
         ModelModule

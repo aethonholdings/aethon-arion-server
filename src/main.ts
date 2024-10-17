@@ -8,14 +8,14 @@ import { ValidationPipe } from "@nestjs/common";
 async function bootstrap() {
     const env = environment();
     let options: any = {};
-    env.dev ? (options = { cors: true }) : null; // allow CORS for localhost dev environment
+    env.root.dev ? (options = { cors: true }) : null; // allow CORS for localhost dev environment
     const app = await NestFactory.create(RootModule, options); // create the root module
-    app.useGlobalPipes(new ValidationPipe({ disableErrorMessages: env.dev ? false : true })); // add validation pipe
+    app.useGlobalPipes(new ValidationPipe({ disableErrorMessages: env.root.dev ? false : true })); // add validation pipe
     app.setGlobalPrefix("arion"); // set global prefix for all routes
     app.use(bodyParser.json({ limit: "50mb" })); // allow for large JSON payloads
     app.use(bodyParser.urlencoded({ limit: "50mb", extended: true })); // allow for large URL encoded payloads
     // create the Swagger documentation
-    if (env.dev) {
+    if (env.root.dev) {
         const config = new DocumentBuilder()
             .setTitle("Arion")
             .setDescription("The Arion API description")
@@ -29,6 +29,6 @@ async function bootstrap() {
         const document = SwaggerModule.createDocument(app, config);
         SwaggerModule.setup("api", app, document, { useGlobalPrefix: true, jsonDocumentUrl: "json" });
     }
-    await app.listen(env.listen); // start the server
+    await app.listen(env.root.listen); // start the server
 }
 bootstrap();

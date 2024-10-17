@@ -4,7 +4,6 @@ import { SimConfigDTO, SimSetDTO } from "aethon-arion-pipeline";
 import { HttpStatus, Injectable, Logger } from "@nestjs/common";
 import { DataSource } from "typeorm";
 import { SimConfigService } from "../sim-config/sim-config.service";
-import { ServerEnvironment } from "../../../../../src/interfaces/interfaces";
 import { Paginated, PaginateQuery } from "nestjs-paginate";
 import { ResultService } from "../result/result.service";
 import { ModelService } from "../../services/model/model.service";
@@ -13,14 +12,16 @@ import { SimSetDTOCreate } from "../../dto/sim-set.dto";
 @Injectable()
 export class SimSetService {
     private _logger: Logger = new Logger(SimSetService.name);
-    private _environment: ServerEnvironment = environment();
+    private _dev: boolean = false;  
 
     constructor(
         private dataSource: DataSource,
         private simConfigService: SimConfigService,
         private resultService: ResultService,
         private modelService: ModelService
-    ) {}
+    ) {
+        this._dev = environment().root.dev;
+    }
 
     findAll(query: any): Promise<SimSetDTO[]> {
         return this.dataSource
@@ -49,9 +50,9 @@ export class SimSetService {
         });
     }
 
-    findResults(id: number): Promise<any> {
-        if (this._environment.dev) this._logger.log("Fetching result data for SimSet " + id);
-        return this.resultService.findAll({ simSetId: id }).catch((err) => {
+    findResults(simSetId: number): Promise<any> {
+        if (this._dev) this._logger.log("Fetching result data for SimSet " + simSetId);
+        return this.resultService.findAll({ simSetId: simSetId }).catch((err) => {
             throw this.modelService.error(err, this._logger);
         });
     }

@@ -2,16 +2,19 @@ import environment from "../../../../../env/environment";
 import { C1Configurator, C1ConfiguratorSignature, C1ModelName, C1ReportingVariablesIndex } from "aethon-arion-c1";
 import { Configurator, ConfiguratorParamsDTO, ResultDTO, SimConfigDTO } from "aethon-arion-pipeline";
 import { HttpException, HttpStatus, Injectable, Logger } from "@nestjs/common";
-import { ServerEnvironment } from "src/interfaces/interfaces";
+import { ServerEnvironment } from "src/common/interfaces/server-environment.interface";
 
 @Injectable()
 export class ModelService {
     private _configurators: Map<string, Configurator> = new Map<string, Configurator>();
     private _modelNames: string[] = ["C1"];
-    private _environment: ServerEnvironment = environment();
+    private _dev: boolean = false;
 
     constructor() {
+        const env: ServerEnvironment = environment();
         this._configurators.set(C1ConfiguratorSignature.name, new C1Configurator());
+        this._dev = env.root.dev;
+
     }
 
     getModelNames(): string[] {
@@ -38,7 +41,7 @@ export class ModelService {
 
    error(err: Error, logger?: Logger, message: string = "Invalid query", httpStatus: HttpStatus = HttpStatus.BAD_REQUEST): HttpException {
         (logger)? logger.log(err.message) : null;
-        if(this._environment.dev) {
+        if(this._dev) {
             message = err.message;
         }
         return new HttpException(message, httpStatus);

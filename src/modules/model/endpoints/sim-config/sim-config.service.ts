@@ -1,30 +1,29 @@
-import environment from "../../../../../env/environment";
 import { Injectable, Logger } from "@nestjs/common";
 import { DataSource } from "typeorm";
 import { OrgConfig, Result, SimConfig, SimSet } from "aethon-arion-db";
 import { ResultDTO, SimConfigDTO } from "aethon-arion-pipeline";
-import { ServerEnvironment } from "src/interfaces/interfaces";
 import { paginate, PaginateConfig, Paginated, PaginateQuery } from "nestjs-paginate";
 import { ModelService } from "../../services/model/model.service";
 import { SimConfigDTOCreate } from "../../dto/sim-config.dto";
-
-export const simConfigPaginationConfig: PaginateConfig<SimConfig> = {
-    defaultLimit: 100,
-    maxLimit: 100,
-    loadEagerRelations: false,
-    sortableColumns: ["avgPerformance"],
-    defaultSortBy: [["avgPerformance", "DESC"]]
-};
+import environment from "../../../../../env/environment";
+import { simConfigPaginationConfig } from "src/common/constants/pagination-config.constants";
 
 @Injectable()
 export class SimConfigService {
     private _logger: Logger = new Logger(SimConfigService.name);
-    private _environment: ServerEnvironment = environment();
+    private _dev: boolean = false;
+    private _randomStreamType: "static" | "random" = "random" // toDo: type to RandomStreamType
+    private _simulationDays = 100;
 
     constructor(
         private dataSource: DataSource,
         private modelService: ModelService
-    ) {}
+    ) {
+        const env = environment();
+        this._dev = env.root.dev;
+        this._randomStreamType = env.options.randomStreamType;
+        this._simulationDays = env.options.simulationDays;
+    }
 
     next(nodeId: string): Promise<SimConfigDTO> {
         return this.dataSource
@@ -36,16 +35,16 @@ export class SimConfigService {
             })
             .then((simConfig) => {
                 if (simConfig !== null) {
-                    if (this._environment.dev) this._logger.log("Next simconfig fetched");
+                    if (this._dev) this._logger.log("Next simconfig fetched");
                     if (simConfig.dispatchedRuns === 0) simConfig.start = new Date();
                     simConfig.dispatchedRuns++;
                     simConfig.simSet.state = "running";
                     simConfig.state = "running";
                     simConfig.simSet.save().then(() => {
-                        if (this._environment.dev) this._logger.log("SimSet updated");
+                        if (this._dev) this._logger.log("SimSet updated");
                     });
                     return simConfig.save().then((simConfig) => {
-                        if (this._environment.dev) this._logger.log("SimConfig updated");
+                        if (this._dev) this._logger.log("SimConfig updated");
                         return simConfig;
                     });
                 }
@@ -118,8 +117,8 @@ export class SimConfigService {
                         dispatchedRuns: 0,
                         randomStreamType: simConfigDTO?.randomStreamType
                             ? simConfigDTO?.randomStreamType
-                            : this._environment.randomStreamType,
-                        days: simConfigDTO?.days ? simConfigDTO.days : this._environment.simulationDays,
+                            : this._randomStreamType,
+                        days: simConfigDTO?.days ? simConfigDTO.days : this._simulationDays,
                         converged: false,
                         running: false,
                         state: "pending"

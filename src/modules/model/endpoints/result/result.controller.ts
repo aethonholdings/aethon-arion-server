@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Body, Param } from "@nestjs/common";
+import { Controller, Get, Post, Body, Param, Query, Res, StreamableFile } from "@nestjs/common";
 import { ResultService } from "./result.service";
 import { ResultDTO } from "aethon-arion-pipeline";
 import { ApiBody, ApiOkResponse, ApiParam, ApiTags } from "@nestjs/swagger";
 import { ResultDTOCreate, ResultDTOGet } from "../../dto/result.dto";
+import { Paginate, Paginated, PaginateQuery } from "nestjs-paginate";
 
 @Controller("result")
 @ApiTags("Result")
@@ -30,8 +31,11 @@ export class ResultController {
         isArray: true,
         description: "An array of all simulation results, subject to a query filter by SimConfigId or SimSetId"
     })
-    index(@Param("simSetId") simSetId?: number, @Param("simConfigId") simConfigId?: number): Promise<ResultDTOGet[]> {
-        return this.resultService.findAll({ simSetId: simSetId, simConfigId: simConfigId }) as Promise<ResultDTOGet[]>;
+    async index(
+        @Query("simSetId") simSetId?: number,
+        @Query("simConfigId") simConfigId?: number
+    ): Promise<ResultDTO[]> {
+        return this.resultService.findAll({ simSetId: simSetId, simConfigId: simConfigId });
     }
 
     // endpoint that returns a single result by id

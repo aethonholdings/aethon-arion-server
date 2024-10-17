@@ -1,10 +1,8 @@
-import { ServerEnvironment } from "src/interfaces/interfaces";
+import { ServerEnvironment } from "src/common/interfaces/server-environment.interface";
 
 export default () =>
     ({
-        name: "dev",
-        dev: true,
-        listen: 3000,
+        root: { name: "dev", dev: true, listen: 3000 },
         database: {
             type: "mysql",
             host: "DBhostIP",
@@ -12,15 +10,17 @@ export default () =>
             username: "arion",
             password: "*******",
             database: "arion",
-            synchronize: false,
+            synchronize: false
         },
         redis: {
             url: "redis://***.***.***.***:6379",
             ttl: 60
         },
-        storeStateSpace: true,
-        convergenceMargin: 0.001,
-        minRuns: 10,
-        randomStreamType: "random",
-        simulationDays: 100
+        options: {
+            storeStateSpace: true,
+            convergenceMargin: 0.001,
+            minRuns: 10,
+            randomStreamType: "random",
+            simulationDays: 100
+        }
     }) as ServerEnvironment;

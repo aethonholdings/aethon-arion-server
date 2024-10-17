@@ -1,11 +1,11 @@
-import { Body, Controller, Delete, Get, Param, Post, Query } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, Query, Res } from "@nestjs/common";
 import { SimSetService } from "./sim-set.service";
-import { ApiOkPaginatedResponse, ApiPaginationQuery, Paginate, PaginateConfig, Paginated } from "nestjs-paginate";
+import { ApiOkPaginatedResponse, ApiPaginationQuery, Paginate, Paginated } from "nestjs-paginate";
 import { ApiBody, ApiOkResponse, ApiParam, ApiTags } from "@nestjs/swagger";
 import { SimSetDTOCreate, SimSetDTOGet } from "../../../../../src/modules/model/dto/sim-set.dto";
 import { ResultDTOGet } from "../../dto/result.dto";
 import { SimConfigDTOGet } from "../../dto/sim-config.dto";
-import { simConfigPaginationConfig } from "../sim-config/sim-config.service";
+import { simConfigPaginationConfig } from "src/common/constants/pagination-config.constants";
 
 @Controller("sim-set")
 @ApiTags("SimSet")
@@ -55,8 +55,8 @@ export class SimSetController {
         isArray: true,
         description: "An array of Result objects for the specified simulation set"
     })
-    results(@Param("id") simSetId: number): Promise<ResultDTOGet[]> {
-        return this.simSetService.findResults(simSetId) as Promise<ResultDTOGet[]>;
+    async results(@Param("id") simSetId: number): Promise<Paginated<ResultDTOGet>> {
+        return this.simSetService.findResults(simSetId);
     }
 
     // endpoint that fetches an array of SimConfigs for a SimSet

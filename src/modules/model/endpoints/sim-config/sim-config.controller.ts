@@ -1,9 +1,10 @@
 import { Body, Controller, Delete, Get, Param, Post, Query } from "@nestjs/common";
-import { simConfigPaginationConfig, SimConfigService } from "./sim-config.service";
+import { SimConfigService } from "./sim-config.service";
 import { ApiOkPaginatedResponse, ApiPaginationQuery, Paginate, Paginated, PaginateQuery } from "nestjs-paginate";
 import { ApiBody, ApiOkResponse, ApiParam, ApiQuery, ApiTags } from "@nestjs/swagger";
 import { SimConfigDTOCreate, SimConfigDTOGet } from "../../dto/sim-config.dto";
 import { ResultDTOGet } from "../../dto/result.dto";
+import { simConfigPaginationConfig } from "src/common/constants/pagination-config.constants";
 
 @Controller("sim-config")
 @ApiTags("SimConfig")
