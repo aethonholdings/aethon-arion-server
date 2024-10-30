@@ -1,10 +1,10 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { DataSource, SelectQueryBuilder } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { Result, StateSpacePoint, SimConfig } from "aethon-arion-db";
 import { Utils, ResultDTO, ResultSet } from "aethon-arion-pipeline";
 import { ModelService } from "../../services/model/model.service";
 import environment from "../../../../../env/environment";
-import { Paginated, Paginator } from 'src/common/utils/paginate/paginate.index';
+import { Paginated, Paginator } from "aethon-nestjs-paginate";
 
 @Injectable()
 export class ResultService {
@@ -122,10 +122,10 @@ export class ResultService {
             });
     }
 
-    async findAll(paginator: Paginator<Result>): Promise<Paginated<ResultDTO>> {
+    async findAll(paginator: Paginator): Promise<Paginated<ResultDTO>> {
         try {
             const source = this._cache // this.dataSource.getRepository(Result);
-            return paginator.run(source).then((results) => results as Paginated<ResultDTO>);
+            return paginator.run<Result>(source).then((results) => results as Paginated<ResultDTO>);
         } catch (err) {
             throw this.modelService.error(err, this._logger);
         }

@@ -1,13 +1,13 @@
 import { Result, SimConfig } from "aethon-arion-db";
-import { PaginateConfig } from "../utils/paginate/paginate.index";
+import { PaginateConfig } from "aethon-nestjs-paginate";
 
-export const simConfigPaginationConfig: PaginateConfig<SimConfig> = {
+export const simConfigPaginationConfig: PaginateConfig = {
     limit: 100,
     limitMax: 100,
     orderBy: [["avgPerformance", "DESC"]]
 };
 
-export const resultPaginationConfig: PaginateConfig<Result> = {
+export const resultPaginationConfig: PaginateConfig = {
     limit: 100,
     limitMax: 100,
     orderBy: [["performance", "DESC"]]
