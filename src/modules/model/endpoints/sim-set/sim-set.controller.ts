@@ -4,7 +4,8 @@ import { ApiBody, ApiOkResponse, ApiParam, ApiTags } from "@nestjs/swagger";
 import { SimSetDTOCreate, SimSetDTOGet } from "../../../../../src/modules/model/dto/sim-set.dto";
 import { ResultDTOGet } from "../../dto/result.dto";
 import { SimConfigDTOGet } from "../../dto/sim-config.dto";
-import { simConfigPaginationConfig } from "src/common/constants/pagination-config.constants";
+import { resultPaginationConfig, simConfigPaginationConfig } from "src/common/constants/pagination-config.constants";
+import { GetPaginator, Paginated } from "aethon-nestjs-paginate";
 
 @Controller("sim-set")
 @ApiTags("SimSet")
@@ -54,9 +55,9 @@ export class SimSetController {
     //     isArray: true,
     //     description: "An array of Result objects for the specified simulation set"
     // })
-    // async results(@Param("id") simSetId: number): Promise<Paginated<ResultDTOGet>> {
-    //     return this.simSetService.findResults(simSetId);
-    // }
+    async results(@GetPaginator(resultPaginationConfig) paginator): Promise<Paginated<ResultDTOGet>> {
+        return this.simSetService.findResults(paginator);
+    }
 
     // endpoint that fetches an array of SimConfigs for a SimSet
     @Get(":id/sim-config")
@@ -68,9 +69,9 @@ export class SimSetController {
     })
     // @ApiPaginationQuery(simConfigPaginationConfig)
     // @ApiOkPaginatedResponse(SimConfigDTOGet, simConfigPaginationConfig)
-    // simConfigs(@Param("id") simSetId: number, @Paginate() paginateQuery): Promise<Paginated<SimConfigDTOGet>> {
-    //     return this.simSetService.findSimConfigs(simSetId, paginateQuery) as Promise<Paginated<SimConfigDTOGet>>;
-    // }
+    simConfigs(@GetPaginator(simConfigPaginationConfig) paginator): Promise<Paginated<SimConfigDTOGet>> {
+        return this.simSetService.findSimConfigs(paginator) as Promise<Paginated<SimConfigDTOGet>>;
+    }
 
     // endpoint that deletes a SimSet
     @Delete(":id")

@@ -3,6 +3,8 @@ import { SimConfigService } from "./sim-config.service";
 import { ApiBody, ApiOkResponse, ApiParam, ApiQuery, ApiTags } from "@nestjs/swagger";
 import { SimConfigDTOCreate, SimConfigDTOGet } from "../../dto/sim-config.dto";
 import { ResultDTOGet } from "../../dto/result.dto";
+import { GetPaginator, Paginated, Paginator } from "aethon-nestjs-paginate";
+import { simConfigPaginationConfig } from "src/common/constants/pagination-config.constants";
 
 
 @Controller("sim-config")
@@ -12,21 +14,20 @@ export class SimConfigController {
 
     // endpoint that fetches an index of all SimConfigs, optionally by simulation set ID
     @Get()
-    @ApiQuery({
-        name: "simSetId",
-        type: Number,
-        required: false,
-        description: "The unique identifier of the simulation set to filter the SimConfigs by",
-        example: 1
-    })
+    // @ApiQuery({
+    //     name: "simSetId",
+    //     type: Number,
+    //     required: false,
+    //     description: "The unique identifier of the simulation set to filter the SimConfigs by",
+    //     example: 1
+    // })
     // @ApiPaginationQuery(simConfigPaginationConfig)
     // @ApiOkPaginatedResponse(SimConfigDTOGet, simConfigPaginationConfig)
-    // index(
-    //     @Paginate() paginateQuery: PaginateQuery,
-    //     @Query("simSetId") simSetId?: number
-    // ): Promise<Paginated<SimConfigDTOGet>> {
-    //     return this.simConfigService.findAll(simSetId, paginateQuery) as Promise<Paginated<SimConfigDTOGet>>;
-    // }
+    index(
+        @GetPaginator(simConfigPaginationConfig) paginator: Paginator
+    ): Promise<Paginated<SimConfigDTOGet>> {
+        return this.simConfigService.findAll(paginator) as Promise<Paginated<SimConfigDTOGet>>;
+    }
 
     // endpoint that fetches the next SimConfig to be run
     @Get("next")

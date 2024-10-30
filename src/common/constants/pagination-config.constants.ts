@@ -1,4 +1,3 @@
-import { Result, SimConfig } from "aethon-arion-db";
 import { PaginateConfig } from "aethon-nestjs-paginate";
 
 export const simConfigPaginationConfig: PaginateConfig = {

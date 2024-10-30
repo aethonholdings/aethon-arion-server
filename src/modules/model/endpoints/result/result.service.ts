@@ -124,8 +124,7 @@ export class ResultService {
 
     async findAll(paginator: Paginator): Promise<Paginated<ResultDTO>> {
         try {
-            const source = this._cache // this.dataSource.getRepository(Result);
-            return paginator.run<Result>(source).then((results) => results as Paginated<ResultDTO>);
+            return paginator.run<Result>(this._cache).then((results) => results as Paginated<ResultDTO>);
         } catch (err) {
             throw this.modelService.error(err, this._logger);
         }
