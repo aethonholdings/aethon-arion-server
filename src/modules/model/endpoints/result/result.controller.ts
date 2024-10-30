@@ -1,9 +1,11 @@
-import { Controller, Get, Post, Body, Param, Query, Res, StreamableFile } from "@nestjs/common";
+import { Controller, Get, Post, Body, Param } from "@nestjs/common";
 import { ResultService } from "./result.service";
 import { ResultDTO } from "aethon-arion-pipeline";
-import { ApiBody, ApiOkResponse, ApiParam, ApiTags } from "@nestjs/swagger";
+import { ApiBody, ApiOkResponse, ApiParam, ApiQuery, ApiTags } from "@nestjs/swagger";
 import { ResultDTOCreate, ResultDTOGet } from "../../dto/result.dto";
-import { Paginate, Paginated, PaginateQuery } from "nestjs-paginate";
+import { Paginated, GetPaginator, PaginateQuery, Paginator } from "src/common/utils/paginate/paginate.index";
+import { resultPaginationConfig } from "src/common/constants/pagination-config.constants";
+import { Result } from "aethon-arion-db";
 
 @Controller("result")
 @ApiTags("Result")
@@ -12,30 +14,19 @@ export class ResultController {
 
     // endpoint that returns all results for a given simulation set and configuration
     @Get()
-    @ApiParam({
-        name: "simSetId",
-        type: Number,
-        description: "The unique identifier of the simulation set to retrieve results for",
-        required: false,
-        example: 1
-    })
-    @ApiParam({
-        name: "simConfigId",
-        type: Number,
-        description: "The unique identifier of the simulation configuration to retrieve results for",
-        required: false,
-        example: 1
+    @ApiQuery({type: PaginateQuery})
+    @ApiOkResponse({
+        description: "All result objects retrieved based on the search query given, paginated",
+        type: Paginated<ResultDTOGet>
     })
     @ApiOkResponse({
-        type: ResultDTOGet,
-        isArray: true,
-        description: "An array of all simulation results, subject to a query filter by SimConfigId or SimSetId"
+        description: "All result objects retrieved based on the search query given, paginated",
+        type: Paginated<ResultDTOGet>
     })
     async index(
-        @Query("simSetId") simSetId?: number,
-        @Query("simConfigId") simConfigId?: number
-    ): Promise<ResultDTO[]> {
-        return this.resultService.findAll({ simSetId: simSetId, simConfigId: simConfigId });
+        @GetPaginator<Result>(resultPaginationConfig) paginator: Paginator<ResultDTO>,
+    ): Promise<Paginated<ResultDTOGet>> {
+        return this.resultService.findAll(paginator) as Promise<Paginated<ResultDTOGet>>;
     }
 
     // endpoint that returns a single result by id

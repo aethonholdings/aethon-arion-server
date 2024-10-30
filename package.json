@@ -38,7 +38,6 @@
     "class-validator": "^0.14.1",
     "json-stream-stringify": "^3.1.6",
     "mysql2": "^3.9.1",
-    "nestjs-paginate": "^9.0.0",
     "npm": "^10.4.0",
     "redis": "^4.7.0",
     "reflect-metadata": "^0.2.1",
@@ -76,9 +75,9 @@
     ],
     "rootDir": "src",
     "moduleNameMapper": {
-            "^src/(.*)$": "<rootDir>/$1",
-            "^env/(.*)$": "<rootDir>/../env/$1"
-        },
+      "^src/(.*)$": "<rootDir>/$1",
+      "^env/(.*)$": "<rootDir>/../env/$1"
+    },
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"

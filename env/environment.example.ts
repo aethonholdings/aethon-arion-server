@@ -1,4 +1,4 @@
-import { ServerEnvironment } from "src/common/interfaces/server-environment.interface";
+import { ServerEnvironment } from "src/common/interfaces/server-environment.interfaces";
 
 export default () =>
     ({

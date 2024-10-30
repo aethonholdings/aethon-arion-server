@@ -1,10 +1,9 @@
 import { Body, Controller, Delete, Get, Param, Post, Query } from "@nestjs/common";
 import { SimConfigService } from "./sim-config.service";
-import { ApiOkPaginatedResponse, ApiPaginationQuery, Paginate, Paginated, PaginateQuery } from "nestjs-paginate";
 import { ApiBody, ApiOkResponse, ApiParam, ApiQuery, ApiTags } from "@nestjs/swagger";
 import { SimConfigDTOCreate, SimConfigDTOGet } from "../../dto/sim-config.dto";
 import { ResultDTOGet } from "../../dto/result.dto";
-import { simConfigPaginationConfig } from "src/common/constants/pagination-config.constants";
+
 
 @Controller("sim-config")
 @ApiTags("SimConfig")
@@ -20,14 +19,14 @@ export class SimConfigController {
         description: "The unique identifier of the simulation set to filter the SimConfigs by",
         example: 1
     })
-    @ApiPaginationQuery(simConfigPaginationConfig)
-    @ApiOkPaginatedResponse(SimConfigDTOGet, simConfigPaginationConfig)
-    index(
-        @Paginate() paginateQuery: PaginateQuery,
-        @Query("simSetId") simSetId?: number
-    ): Promise<Paginated<SimConfigDTOGet>> {
-        return this.simConfigService.findAll(simSetId, paginateQuery) as Promise<Paginated<SimConfigDTOGet>>;
-    }
+    // @ApiPaginationQuery(simConfigPaginationConfig)
+    // @ApiOkPaginatedResponse(SimConfigDTOGet, simConfigPaginationConfig)
+    // index(
+    //     @Paginate() paginateQuery: PaginateQuery,
+    //     @Query("simSetId") simSetId?: number
+    // ): Promise<Paginated<SimConfigDTOGet>> {
+    //     return this.simConfigService.findAll(simSetId, paginateQuery) as Promise<Paginated<SimConfigDTOGet>>;
+    // }
 
     // endpoint that fetches the next SimConfig to be run
     @Get("next")

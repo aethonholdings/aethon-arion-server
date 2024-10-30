@@ -2,7 +2,6 @@ import { Injectable, Logger } from "@nestjs/common";
 import { DataSource } from "typeorm";
 import { OrgConfig, Result, SimConfig, SimSet } from "aethon-arion-db";
 import { ResultDTO, SimConfigDTO } from "aethon-arion-pipeline";
-import { paginate, PaginateConfig, Paginated, PaginateQuery } from "nestjs-paginate";
 import { ModelService } from "../../services/model/model.service";
 import { SimConfigDTOCreate } from "../../dto/sim-config.dto";
 import environment from "../../../../../env/environment";
@@ -66,22 +65,23 @@ export class SimConfigService {
             });
     }
 
-    findAll(simSetId: number, paginateQuery: PaginateQuery): Promise<Paginated<SimConfigDTO>> {
-        const query = this.dataSource
-            .getRepository(SimConfig)
-            .createQueryBuilder("simConfig")
-            .leftJoinAndSelect("simConfig.orgConfig", "orgConfig")
-            .where("simConfig.simSetId = :simSetId", { simSetId: simSetId })
-            .addOrderBy("simConfig.avgPerformance", "DESC")
-            .setFindOptions({ loadEagerRelations: false, relationLoadStrategy: "query" });
-        return paginate(paginateQuery, query, simConfigPaginationConfig)
-            .then((paginated) => {
-                return paginated as Paginated<SimConfigDTO>;
-            })
-            .catch((err) => {
-                throw this.modelService.error(err, this._logger);
-            });
-    }
+    // findAll(simSetId: number, paginateQuery: PaginateQuery): Promise<Paginated<SimConfigDTO>> {
+        // const query = this.dataSource
+        //     .getRepository(SimConfig)
+        //     .createQueryBuilder("simConfig")
+        //     .leftJoinAndSelect("simConfig.orgConfig", "orgConfig")
+        //     .where("simConfig.simSetId = :simSetId", { simSetId: simSetId })
+        //     .addOrderBy("simConfig.avgPerformance", "DESC")
+        //     .setFindOptions({ loadEagerRelations: false, relationLoadStrategy: "query" });
+        // return paginate(paginateQuery, query, simConfigPaginationConfig)
+        //     .then((paginated) => {
+        //         return paginated as Paginated<SimConfigDTO>;
+        //     })
+        //     .catch((err) => {
+        //         throw this.modelService.error(err, this._logger);
+        //     });
+    //     return null;
+    // }
 
     findResults(id: number): Promise<ResultDTO[]> {
         return this.dataSource

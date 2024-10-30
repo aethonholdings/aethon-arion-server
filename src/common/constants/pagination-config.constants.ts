@@ -1,10 +1,14 @@
-import { SimConfig } from "aethon-arion-db";
-import { PaginateConfig } from "nestjs-paginate";
+import { Result, SimConfig } from "aethon-arion-db";
+import { PaginateConfig } from "../utils/paginate/paginate.index";
 
 export const simConfigPaginationConfig: PaginateConfig<SimConfig> = {
-    defaultLimit: 100,
-    maxLimit: 100,
-    loadEagerRelations: false,
-    sortableColumns: ["avgPerformance"],
-    defaultSortBy: [["avgPerformance", "DESC"]]
+    limit: 100,
+    limitMax: 100,
+    orderBy: [["avgPerformance", "DESC"]]
+};
+
+export const resultPaginationConfig: PaginateConfig<Result> = {
+    limit: 100,
+    limitMax: 100,
+    orderBy: [["performance", "DESC"]]
 };

@@ -1,18 +1,10 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { DataSource } from "typeorm";
+import { DataSource, SelectQueryBuilder } from 'typeorm';
 import { Result, StateSpacePoint, SimConfig } from "aethon-arion-db";
 import { Utils, ResultDTO, ResultSet } from "aethon-arion-pipeline";
 import { ModelService } from "../../services/model/model.service";
-import { paginate, PaginateConfig, Paginated, PaginateQuery } from "nestjs-paginate";
 import environment from "../../../../../env/environment";
-
-export const resultPaginationConfig: PaginateConfig<Result> = {
-    defaultLimit: 1000,
-    maxLimit: 1000,
-    loadEagerRelations: false,
-    sortableColumns: ["performance"],
-    defaultSortBy: [["performance", "DESC"]]
-};
+import { Paginated, Paginator } from 'src/common/utils/paginate/paginate.index';
 
 @Injectable()
 export class ResultService {
@@ -21,6 +13,7 @@ export class ResultService {
     private _minRuns: number = 10;
     private _convergenceMargin: number = 0.01;
     private _logger: Logger = new Logger(ResultService.name);
+    private _cache: Result[] = [];
 
     constructor(
         private dataSource: DataSource,
@@ -30,6 +23,18 @@ export class ResultService {
         this._dev = env.root.dev;
         this._storeStateSpace = env.options.storeStateSpace;
         this._minRuns = env.options.minRuns;
+    }
+
+    async onModuleInit() {
+        this._logger.log("Initialising cache");
+        await this.dataSource
+            .getRepository(Result)
+            .find()
+            .then((results) => {
+                this._logger.log("Initialising cache");
+                this._cache = results;
+                this._logger.log(`Cache initialised with ${this._cache.length} results`);
+            });
     }
 
     async create(resultDto: ResultDTO): Promise<ResultDTO> {
@@ -89,6 +94,8 @@ export class ResultService {
                 // save everything
                 if (this._dev) this._logger.log("Saving result");
                 return Promise.all([simConfig.save(), simConfig.simSet.save(), result.save()]).then((resultArray) => {
+                    // add the result to the cache
+                    this._cache.push(result[2]);
                     return resultArray;
                 });
             })
@@ -115,16 +122,10 @@ export class ResultService {
             });
     }
 
-    async findAll(
-        params: { simSetId?: number; simConfigId?: number }
-    ): Promise<ResultDTO[]> {
+    async findAll(paginator: Paginator<Result>): Promise<Paginated<ResultDTO>> {
         try {
-            let query = this.dataSource.getRepository(Result).createQueryBuilder();
-            if (params.simSetId) query = query.andWhere("simSetId = :simSetId", { simSetId: params.simSetId });
-            if (params.simConfigId)
-                query = query.andWhere("simConfigId = :simConfigId", { simConfigId: params.simConfigId });
-            
-            return query.execute();
+            const source = this._cache // this.dataSource.getRepository(Result);
+            return paginator.run(source).then((results) => results as Paginated<ResultDTO>);
         } catch (err) {
             throw this.modelService.error(err, this._logger);
         }

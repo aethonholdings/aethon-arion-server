@@ -1,6 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Post, Query, Res } from "@nestjs/common";
 import { SimSetService } from "./sim-set.service";
-import { ApiOkPaginatedResponse, ApiPaginationQuery, Paginate, Paginated } from "nestjs-paginate";
 import { ApiBody, ApiOkResponse, ApiParam, ApiTags } from "@nestjs/swagger";
 import { SimSetDTOCreate, SimSetDTOGet } from "../../../../../src/modules/model/dto/sim-set.dto";
 import { ResultDTOGet } from "../../dto/result.dto";
@@ -43,21 +42,21 @@ export class SimSetController {
     }
 
     // endpoint that fetches an array of the Results of a SimSet
-    @Get(":id/result")
-    @ApiParam({
-        name: "id",
-        type: Number,
-        description: "The unique identifier of the simulation set to fetch the results for",
-        example: 1
-    })
-    @ApiOkResponse({
-        type: ResultDTOGet,
-        isArray: true,
-        description: "An array of Result objects for the specified simulation set"
-    })
-    async results(@Param("id") simSetId: number): Promise<Paginated<ResultDTOGet>> {
-        return this.simSetService.findResults(simSetId);
-    }
+    // @Get(":id/result")
+    // @ApiParam({
+    //     name: "id",
+    //     type: Number,
+    //     description: "The unique identifier of the simulation set to fetch the results for",
+    //     example: 1
+    // })
+    // @ApiOkResponse({
+    //     type: ResultDTOGet,
+    //     isArray: true,
+    //     description: "An array of Result objects for the specified simulation set"
+    // })
+    // async results(@Param("id") simSetId: number): Promise<Paginated<ResultDTOGet>> {
+    //     return this.simSetService.findResults(simSetId);
+    // }
 
     // endpoint that fetches an array of SimConfigs for a SimSet
     @Get(":id/sim-config")
@@ -67,11 +66,11 @@ export class SimSetController {
         description: "The unique identifier of the simulation set to fetch the SimConfigs for",
         example: 1
     })
-    @ApiPaginationQuery(simConfigPaginationConfig)
-    @ApiOkPaginatedResponse(SimConfigDTOGet, simConfigPaginationConfig)
-    simConfigs(@Param("id") simSetId: number, @Paginate() paginateQuery): Promise<Paginated<SimConfigDTOGet>> {
-        return this.simSetService.findSimConfigs(simSetId, paginateQuery) as Promise<Paginated<SimConfigDTOGet>>;
-    }
+    // @ApiPaginationQuery(simConfigPaginationConfig)
+    // @ApiOkPaginatedResponse(SimConfigDTOGet, simConfigPaginationConfig)
+    // simConfigs(@Param("id") simSetId: number, @Paginate() paginateQuery): Promise<Paginated<SimConfigDTOGet>> {
+    //     return this.simSetService.findSimConfigs(simSetId, paginateQuery) as Promise<Paginated<SimConfigDTOGet>>;
+    // }
 
     // endpoint that deletes a SimSet
     @Delete(":id")

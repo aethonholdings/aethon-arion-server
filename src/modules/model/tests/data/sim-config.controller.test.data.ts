@@ -1,4 +1,3 @@
-import { PaginateQuery } from "nestjs-paginate";
 
 export const simConfigControllerTestData: { [key: string]: { days: number; randomStreamType: "static" | "random" } } = {
     basic: {
@@ -7,10 +6,10 @@ export const simConfigControllerTestData: { [key: string]: { days: number; rando
     }
 };
 
-export const indexTestQuery: PaginateQuery = {
-    path: "/sim-config",
-    sortBy: [["avgPerformance", "DESC"]]
-};
+// export const indexTestQuery: PaginateQuery = {
+//     path: "/sim-config",
+//     sortBy: [["avgPerformance", "DESC"]]
+// };
 
 
 export const simConfigControllerSimulationTestResults = {
