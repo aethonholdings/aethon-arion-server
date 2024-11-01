@@ -15,13 +15,8 @@ const env = environment();
             isGlobal: true
         }),
         TypeOrmModule.forRoot({
+            ...env.database,
             type: env.database.type as any,
-            host: env.database.host,
-            port: env.database.port,
-            username: env.database.username,
-            password: env.database.password,
-            database: env.database.database,
-            synchronize: env.database.synchronize,
             autoLoadEntities: true
         }),
         DatabaseModule,

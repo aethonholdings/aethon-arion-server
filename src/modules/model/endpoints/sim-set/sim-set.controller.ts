@@ -4,8 +4,8 @@ import { ApiBody, ApiOkResponse, ApiParam, ApiTags } from "@nestjs/swagger";
 import { SimSetDTOCreate, SimSetDTOGet } from "../../../../../src/modules/model/dto/sim-set.dto";
 import { ResultDTOGet } from "../../dto/result.dto";
 import { SimConfigDTOGet } from "../../dto/sim-config.dto";
-import { resultPaginationConfig, simConfigPaginationConfig } from "src/common/constants/pagination-config.constants";
-import { GetPaginator, Paginated } from "aethon-nestjs-paginate";
+import { resultPaginationConfig, simConfigPaginationConfig } from "src/modules/model/constants/pagination-config.constants";
+import { GetPaginator, Paginated, PaginateQuery } from "aethon-nestjs-paginate";
 
 @Controller("sim-set")
 @ApiTags("SimSet")
@@ -43,18 +43,17 @@ export class SimSetController {
     }
 
     // endpoint that fetches an array of the Results of a SimSet
-    // @Get(":id/result")
-    // @ApiParam({
-    //     name: "id",
-    //     type: Number,
-    //     description: "The unique identifier of the simulation set to fetch the results for",
-    //     example: 1
-    // })
-    // @ApiOkResponse({
-    //     type: ResultDTOGet,
-    //     isArray: true,
-    //     description: "An array of Result objects for the specified simulation set"
-    // })
+    @Get(":id/result")
+    @ApiParam({
+        name: "paginateQuery",
+        type: PaginateQuery,
+        required: false,
+        description: "The pagination query setting out the Where and OrderBy clauses and pagination schema requested",
+    })
+    @ApiOkResponse({
+        type: Paginated<ResultDTOGet>,
+        description: "A Paginated<Result> object"
+    })
     async results(@GetPaginator(resultPaginationConfig) paginator): Promise<Paginated<ResultDTOGet>> {
         return this.simSetService.findResults(paginator);
     }
@@ -62,13 +61,14 @@ export class SimSetController {
     // endpoint that fetches an array of SimConfigs for a SimSet
     @Get(":id/sim-config")
     @ApiParam({
-        name: "id",
-        type: Number,
-        description: "The unique identifier of the simulation set to fetch the SimConfigs for",
-        example: 1
+        name: "paginateQuery",
+        type: PaginateQuery,
+        description: "The pagination query setting out the Where and OrderBy clauses and pagination schema requested",
     })
-    // @ApiPaginationQuery(simConfigPaginationConfig)
-    // @ApiOkPaginatedResponse(SimConfigDTOGet, simConfigPaginationConfig)
+    @ApiOkResponse({
+        type: Paginated<ResultDTOGet>,
+        description: "A Paginated<SimConfig> object"
+    })
     simConfigs(@GetPaginator(simConfigPaginationConfig) paginator): Promise<Paginated<SimConfigDTOGet>> {
         return this.simSetService.findSimConfigs(paginator) as Promise<Paginated<SimConfigDTOGet>>;
     }

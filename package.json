@@ -1,6 +1,6 @@
 {
   "name": "aethon-arion-server",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "The Arion simulation API server",
   "repository": "github:aethonholdings/aethon-arion-server",
   "author": "Konstantinos Dimitriou",
@@ -21,7 +21,7 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json --watch"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.10",
@@ -34,7 +34,7 @@
     "aethon-arion-c1": "^0.2.0",
     "aethon-arion-db": "^0.1.1",
     "aethon-arion-pipeline": "^0.1.0",
-    "aethon-nestjs-paginate": "^0.0.1",
+    "aethon-nestjs-paginate": "^0.0.2",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "json-stream-stringify": "^3.1.6",

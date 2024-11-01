@@ -4,7 +4,7 @@ import { ResultDTO } from "aethon-arion-pipeline";
 import { ApiBody, ApiOkResponse, ApiParam, ApiQuery, ApiTags } from "@nestjs/swagger";
 import { ResultDTOCreate, ResultDTOGet } from "../../dto/result.dto";
 import { Paginated, GetPaginator, PaginateQuery, Paginator } from "aethon-nestjs-paginate";
-import { resultPaginationConfig } from "src/common/constants/pagination-config.constants";
+import { resultPaginationConfig } from "src/modules/model/constants/pagination-config.constants";
 
 @Controller("result")
 @ApiTags("Result")
@@ -13,10 +13,11 @@ export class ResultController {
 
     // endpoint that returns all results for a given simulation set and configuration
     @Get()
-    @ApiQuery({type: PaginateQuery})
-    @ApiOkResponse({
-        description: "All result objects retrieved based on the search query given, paginated",
-        type: Paginated<ResultDTOGet>
+    @ApiQuery({
+        name: "paginateQuery",
+        type: PaginateQuery,
+        required: false,
+        description: "The pagination query setting out the Where and OrderBy clauses and pagination schema requested",
     })
     @ApiOkResponse({
         description: "All result objects retrieved based on the search query given, paginated",

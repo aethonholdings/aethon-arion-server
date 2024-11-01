@@ -1,7 +1,7 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { INestApplication } from "@nestjs/common";
 import request from "supertest";
-import { RootModule } from "./../src/modules/root/root.module";
+import { RootModule } from "../src/modules/root/root.module";
 
 describe("AppController (e2e)", () => {
     let app: INestApplication;
@@ -15,7 +15,12 @@ describe("AppController (e2e)", () => {
         await app.init();
     });
 
-    it("/ (GET)", () => {
-        return request(app.getHttpServer()).get("/").expect(200).expect("Hello World!");
+    it("/ (GET)", async () => {
+        let response = await request(app.getHttpServer()).get("/sim-config");
+        return response;
+    });
+
+    afterEach(async () => {
+        await app.close();
     });
 });

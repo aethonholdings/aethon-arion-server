@@ -3,9 +3,8 @@ import { SimConfigService } from "./sim-config.service";
 import { ApiBody, ApiOkResponse, ApiParam, ApiQuery, ApiTags } from "@nestjs/swagger";
 import { SimConfigDTOCreate, SimConfigDTOGet } from "../../dto/sim-config.dto";
 import { ResultDTOGet } from "../../dto/result.dto";
-import { GetPaginator, Paginated, Paginator } from "aethon-nestjs-paginate";
-import { simConfigPaginationConfig } from "src/common/constants/pagination-config.constants";
-
+import { GetPaginator, Paginated, PaginateQuery, Paginator } from "aethon-nestjs-paginate";
+import { simConfigPaginationConfig } from "src/modules/model/constants/pagination-config.constants";
 
 @Controller("sim-config")
 @ApiTags("SimConfig")
@@ -14,18 +13,17 @@ export class SimConfigController {
 
     // endpoint that fetches an index of all SimConfigs, optionally by simulation set ID
     @Get()
-    // @ApiQuery({
-    //     name: "simSetId",
-    //     type: Number,
-    //     required: false,
-    //     description: "The unique identifier of the simulation set to filter the SimConfigs by",
-    //     example: 1
-    // })
-    // @ApiPaginationQuery(simConfigPaginationConfig)
-    // @ApiOkPaginatedResponse(SimConfigDTOGet, simConfigPaginationConfig)
-    index(
-        @GetPaginator(simConfigPaginationConfig) paginator: Paginator
-    ): Promise<Paginated<SimConfigDTOGet>> {
+    @ApiQuery({
+        name: "paginateQuery",
+        type: PaginateQuery,
+        required: false,
+        description: "The pagination query setting out the Where and OrderBy clauses and pagination schema requested",
+    })
+    @ApiOkResponse({
+        type: Paginated<SimConfigDTOGet>,
+        description: "A Paginated<SimConfig> object"
+    })
+    index(@GetPaginator(simConfigPaginationConfig) paginator: Paginator): Promise<Paginated<SimConfigDTOGet>> {
         return this.simConfigService.findAll(paginator) as Promise<Paginated<SimConfigDTOGet>>;
     }
 
@@ -88,9 +86,7 @@ export class SimConfigController {
         type: SimConfigDTOGet,
         description: "The SimConfig object created by the request"
     })
-    create(
-        @Body() simConfigDTOCreate: SimConfigDTOCreate
-    ): Promise<SimConfigDTOGet> {
+    create(@Body() simConfigDTOCreate: SimConfigDTOCreate): Promise<SimConfigDTOGet> {
         return this.simConfigService.create(simConfigDTOCreate) as Promise<SimConfigDTOGet>;
     }
 
