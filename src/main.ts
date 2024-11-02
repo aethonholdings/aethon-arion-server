@@ -37,7 +37,7 @@ async function bootstrap() {
             .addTag("StateSpace")
             .build();
         const document = SwaggerModule.createDocument(app, config);
-        SwaggerModule.setup("api", app, document, { useGlobalPrefix: true, jsonDocumentUrl: "json" });
+        SwaggerModule.setup("api", app, document, { useGlobalPrefix: true, jsonDocumentUrl: "api/json" });
     }
 
     // add validation pipe
