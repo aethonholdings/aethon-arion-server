@@ -31,6 +31,7 @@
     "@nestjs/platform-express": "^10.3.10",
     "@nestjs/swagger": "^7.4.0",
     "@nestjs/typeorm": "^10.0.2",
+    "aethon-api-types": "^0.0.2",
     "aethon-arion-c1": "^0.2.0",
     "aethon-arion-db": "^0.1.1",
     "aethon-arion-pipeline": "^0.1.0",
