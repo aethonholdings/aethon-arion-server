@@ -5,6 +5,7 @@ import * as bodyParser from "body-parser";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { ValidationPipe } from "@nestjs/common";
 import { APIRequestInterceptor } from "./common/interceptors/api-request/api-request.interceptor";
+import { DefaultExceptionFilter } from "./common/filters/default-exception/default-exception.filter";
 
 async function bootstrap() {
     const env = environment();
@@ -13,14 +14,16 @@ async function bootstrap() {
     env.root.dev ? (options = { cors: true }) : null; 
     // create the root module
     const app = await NestFactory.create(RootModule, options); 
-    // add validation pipe
-    app.useGlobalPipes(new ValidationPipe({ disableErrorMessages: env.root.dev ? false : true })); 
+     
     // set global prefix for all routes
     app.setGlobalPrefix("arion"); 
+    
     // allow for large JSON payloads
     app.use(bodyParser.json({ limit: "50mb" })); 
+    
     // allow for large URL encoded payloads
     app.use(bodyParser.urlencoded({ limit: "50mb", extended: true })); 
+
     // create the Swagger documentation
     if (env.root.dev) {
         const config = new DocumentBuilder()
@@ -36,8 +39,16 @@ async function bootstrap() {
         const document = SwaggerModule.createDocument(app, config);
         SwaggerModule.setup("api", app, document, { useGlobalPrefix: true, jsonDocumentUrl: "json" });
     }
+
+    // add validation pipe
+    app.useGlobalPipes(new ValidationPipe({ disableErrorMessages: env.root.dev ? false : true })); 
+    
+    // set up exception filters
+    app.useGlobalFilters(new DefaultExceptionFilter());
+
     // add global interceptors
     app.useGlobalInterceptors(new APIRequestInterceptor());
+
     // start the server
     await app.listen(env.root.listen); // start the server
 }
