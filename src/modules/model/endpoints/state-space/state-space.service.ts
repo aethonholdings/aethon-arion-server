@@ -7,7 +7,10 @@ import { ModelService } from "../../services/model/model.service";
 @Injectable()
 export class StateSpaceService {
     private _logger: Logger = new Logger(StateSpaceService.name);
-    constructor(private dataSource: DataSource, private modelService: ModelService) {}
+    constructor(
+        private dataSource: DataSource,
+        private modelService: ModelService
+    ) {}
 
     find(resultId: number): Promise<StateSpacePointDTO[]> {
         return this.dataSource

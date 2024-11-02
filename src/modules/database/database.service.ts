@@ -5,13 +5,7 @@ import { SimConfig, SimSet, OrgConfig, Result, StateSpacePoint } from "aethon-ar
 
 @Injectable()
 export class DatabaseService {
-    entities: any[] = [
-        SimSet,
-        OrgConfig,
-        SimConfig,
-        Result, 
-        StateSpacePoint
-    ];
+    entities: any[] = [SimSet, OrgConfig, SimConfig, Result, StateSpacePoint];
     constructor(private dataSource: DataSource) {}
 
     async purgeDb() {

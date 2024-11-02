@@ -16,7 +16,7 @@ describe("AppController (e2e)", () => {
     });
 
     it("/ (GET)", async () => {
-        let response = await request(app.getHttpServer()).get("/sim-config");
+        const response = await request(app.getHttpServer()).get("/sim-config");
         return response;
     });
 

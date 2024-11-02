@@ -4,8 +4,7 @@ import { DataSource } from "typeorm";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { ModuleMetadata } from "@nestjs/common";
 import { SimConfig } from "aethon-arion-db";
-import { SimConfigDTO } from "aethon-arion-pipeline";
-import { Paginated, Paginator } from "aethon-nestjs-paginate";
+import { Paginator } from "aethon-nestjs-paginate";
 import { SimConfigController } from "../../endpoints/sim-config/sim-config.controller";
 import { SimConfigService } from "../../endpoints/sim-config/sim-config.service";
 import { ModelService } from "../../services/model/model.service";
@@ -16,7 +15,7 @@ import { simConfigPaginationConfig } from "src/modules/model/constants/paginatio
 describe("Model module: SimConfigController", () => {
     let controller: SimConfigController;
     let dataSource: DataSource;
-    let env = environment();
+    const env = environment();
 
     const testingModuleConfig: ModuleMetadata = {
         imports: [TypeOrmModule.forRoot(env.database), TypeOrmModule.forFeature([SimConfig])],
@@ -35,7 +34,7 @@ describe("Model module: SimConfigController", () => {
     });
 
     it("returns paginated sim configs", async () => {
-        const result = await controller.index(new Paginator(simConfigPaginationConfig, indexTestQuery, "http://foo/" ));
+        const result = await controller.index(new Paginator(simConfigPaginationConfig, indexTestQuery, "http://foo/"));
         expect(result.meta).toBeDefined();
         expect(result.data).toBeDefined();
         expect(result.links).toBeDefined();
@@ -43,14 +42,16 @@ describe("Model module: SimConfigController", () => {
 
     it("returns the next sim config", async () => {
         const next = await controller.next(nodeId);
-        if(next) {
+        if (next) {
             expect(next.state).toEqual("running");
         } else {
             // THIS CHECK WON'T WORK ANYMORE BECAUSE PAGINATION MEANS WE WON'T GET ALL THE SIMCONFIGS TO ENSURE THEY ARE ALL COMPLETED, NEED TO FIX THIS
-            const index = await controller.index(new Paginator(simConfigPaginationConfig, indexTestQuery, "http://foo/" ));
+            const index = await controller.index(
+                new Paginator(simConfigPaginationConfig, indexTestQuery, "http://foo/")
+            );
             index.data.forEach((simConfig) => {
                 expect(simConfig.state).not.toEqual("pending");
-            })
+            });
         }
     });
 

@@ -13,7 +13,7 @@ import { orgConfigControllerCreateTestData } from "../data/org-config.controller
 describe("Model module: OrgConfigController", () => {
     let controller: OrgConfigController;
     let dataSource: DataSource;
-    let env = environment();
+    const env = environment();
 
     const testingModuleConfig: ModuleMetadata = {
         imports: [TypeOrmModule.forRoot(env.database), TypeOrmModule.forFeature([OrgConfig])],

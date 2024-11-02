@@ -169,7 +169,8 @@ export class SimConfigDTOGet {
         name: "results",
         type: Object,
         required: false,
-        description: "The results of the simulation"})
+        description: "The results of the simulation"
+    })
     results: ResultDTO[];
     state: StateType;
 }

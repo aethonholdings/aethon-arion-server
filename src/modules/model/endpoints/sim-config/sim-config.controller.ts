@@ -17,7 +17,7 @@ export class SimConfigController {
         name: "paginateQuery",
         type: PaginateQuery,
         required: false,
-        description: "The pagination query setting out the Where and OrderBy clauses and pagination schema requested",
+        description: "The pagination query setting out the Where and OrderBy clauses and pagination schema requested"
     })
     @ApiOkResponse({
         type: Paginated<SimConfigDTOGet>,

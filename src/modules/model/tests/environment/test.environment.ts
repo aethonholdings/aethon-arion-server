@@ -1,10 +1,17 @@
-import env from '../../../../../env/environment.dev';
 import { TypeOrmModuleOptions } from "@nestjs/typeorm";
-
-const databaseConfig: TypeOrmModuleOptions = env().database as TypeOrmModuleOptions;
 
 export function environment(): { database: TypeOrmModuleOptions } {
     return {
-        database: databaseConfig
+        database: {
+            type: "mysql",
+            host: "localhost",
+            port: 3306,
+            username: "root",
+            password: "NuckyThompson123",
+            database: "arion",
+            synchronize: true,
+            logging: false,
+            entities: ["src/../node_modules/aethon-arion-db/**/*.entity{.ts,.js}"]
+        }
     };
 }

@@ -30,13 +30,13 @@ export class SimSetDTOGet implements SimSetDTO {
         example: "C1"
     })
     type: string;
-  
+
     @IsString()
     @ApiProperty({
         name: "simConfigs",
         isArray: true,
         type: Object,
-        description: "The simulation configurations for the simulation set",
+        description: "The simulation configurations for the simulation set"
     })
     simConfigs: SimConfigDTO[];
 
@@ -48,7 +48,7 @@ export class SimSetDTOGet implements SimSetDTO {
         example: "running"
     })
     state: StateType;
-    
+
     @IsNumber()
     @ApiProperty({
         name: "runCount",

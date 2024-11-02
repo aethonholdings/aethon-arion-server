@@ -1,13 +1,11 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { SeedsController } from "../../endpoints/seeds/seeds.controller";
-import { DataSource } from "typeorm";
 import { ModuleMetadata } from "@nestjs/common";
 import { SeedsService } from "../../endpoints/seeds/seeds.service";
 import { ModelService } from "../../services/model/model.service";
 
 describe("Model module: SeedsController", () => {
     let controller: SeedsController;
-    let dataSource: DataSource;
 
     const testingModuleConfig: ModuleMetadata = {
         controllers: [SeedsController],

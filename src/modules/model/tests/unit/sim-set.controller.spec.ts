@@ -14,8 +14,8 @@ import { ResultService } from "../../endpoints/result/result.service";
 describe("Model module: SimSetController", () => {
     let controller: SimSetController;
     let dataSource: DataSource;
-    let env = environment();
-    
+    const env = environment();
+
     const testingModuleConfig: ModuleMetadata = {
         imports: [TypeOrmModule.forRoot(env.database), TypeOrmModule.forFeature([SimSet])],
         controllers: [SimSetController],
@@ -47,7 +47,7 @@ describe("Model module: SimSetController", () => {
         expect(deleted).toBeDefined();
         expect(deleted).toStrictEqual(create.id);
         try {
-            const viewAgain = await controller.view(create.id);
+            await controller.view(create.id);
         } catch (error) {
             expect(error).toBeInstanceOf(HttpException);
         }

@@ -12,7 +12,7 @@ import { Paginated, Paginator } from "aethon-nestjs-paginate";
 @Injectable()
 export class SimSetService {
     private _logger: Logger = new Logger(SimSetService.name);
-    private _dev: boolean = false;  
+    private _dev: boolean = false;
 
     constructor(
         private dataSource: DataSource,

@@ -35,7 +35,7 @@
     "aethon-arion-c1": "^0.2.0",
     "aethon-arion-db": "^0.1.1",
     "aethon-arion-pipeline": "^0.1.0",
-    "aethon-nestjs-paginate": "^0.0.2",
+    "aethon-nestjs-paginate": "^0.0.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "json-stream-stringify": "^3.1.6",

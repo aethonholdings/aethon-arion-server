@@ -38,9 +38,14 @@ export class ModelService {
         return performance;
     }
 
-   error(err: Error, logger?: Logger, message: string = "Invalid query", httpStatus: HttpStatus = HttpStatus.BAD_REQUEST): HttpException {
-        (logger)? logger.log(err.message) : null;
-        if(this._dev) {
+    error(
+        err: Error,
+        logger?: Logger,
+        message: string = "Invalid query",
+        httpStatus: HttpStatus = HttpStatus.BAD_REQUEST
+    ): HttpException {
+        logger ? logger.log(err.message) : null;
+        if (this._dev) {
             message = err.message;
         }
         return new HttpException(message, httpStatus);
@@ -50,9 +55,11 @@ export class ModelService {
         return repository
             .delete({ id: id })
             .then((result) => {
-                if(result.affected) return id; else throw new Error("No record found");
-            }).catch((err) => {
+                if (result.affected) return id;
+                else throw new Error("No record found");
+            })
+            .catch((err) => {
                 throw this.error(err, logger);
-            });;
+            });
     }
 }

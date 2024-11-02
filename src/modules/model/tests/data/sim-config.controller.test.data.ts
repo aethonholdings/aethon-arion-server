@@ -11,11 +11,10 @@ export const indexTestQuery: PaginateQuery = {
     orderBy: [["avgPerformance", "DESC"]]
 };
 
-
 export const simConfigControllerSimulationTestResults = {
     basic: {
         avgPerformance: 9588.04,
         entropy: 3.41023,
         state: "completed"
     }
-}
+};

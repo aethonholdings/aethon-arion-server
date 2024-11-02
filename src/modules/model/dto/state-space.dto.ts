@@ -1,7 +1,6 @@
-import { ApiProperty, PickType } from "@nestjs/swagger"
+import { ApiProperty, PickType } from "@nestjs/swagger";
 import { ResultDTO } from "aethon-arion-pipeline";
-import { IsArray, IsNumber, IsObject } from "class-validator"
-
+import { IsArray, IsNumber, IsObject } from "class-validator";
 
 export class StateSpacePointDTOGet {
     @IsNumber()
@@ -11,7 +10,7 @@ export class StateSpacePointDTOGet {
         description: "The unique identifier of the state space point",
         example: 1
     })
-    id: number
+    id: number;
 
     @IsNumber()
     @ApiProperty({
@@ -26,9 +25,9 @@ export class StateSpacePointDTOGet {
     @ApiProperty({
         name: "result",
         type: Object,
-        description: "The result to which the state space point belongs",
+        description: "The result to which the state space point belongs"
     })
-    result: ResultDTO
+    result: ResultDTO;
 
     @IsNumber()
     @ApiProperty({
@@ -37,7 +36,7 @@ export class StateSpacePointDTOGet {
         description: "The clock tick for which the state space point is recorded",
         example: 1
     })
-    clockTick: number
+    clockTick: number;
 
     @IsArray()
     @IsNumber({}, { each: true })
@@ -51,7 +50,7 @@ export class StateSpacePointDTOGet {
             0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0
         ]
     })
-    board: number[]
+    board: number[];
 
     @IsArray()
     @IsNumber({}, { each: true })
@@ -59,11 +58,9 @@ export class StateSpacePointDTOGet {
         name: "agentStates",
         description: "The state of the Agent Set",
         type: [Number],
-        example: [
-            0, 0, 0, 1
-        ]
+        example: [0, 0, 0, 1]
     })
-    agentStates: number[]
+    agentStates: number[];
 
     @IsArray()
     @IsNumber({}, { each: true })
@@ -73,7 +70,7 @@ export class StateSpacePointDTOGet {
         type: [Number],
         example: [0, 0, 0, 0, 0, 0, 0, 0]
     })
-    plant: number[]
+    plant: number[];
 
     @IsArray()
     @IsNumber({}, { each: true })
@@ -81,16 +78,23 @@ export class StateSpacePointDTOGet {
         name: "reporting",
         description: "The state of the Reporting System",
         type: [Number],
-        example: [0,873600,-873600,91,1,1,300,9600]
+        example: [0, 873600, -873600, 91, 1, 1, 300, 9600]
     })
-    reporting: number[]
+    reporting: number[];
 
     @ApiProperty({
         name: "priorityTensor",
         description: "The priority tensor at this clock tick",
-        type: [[[Number]]],
+        type: [[[Number]]]
     })
-    priorityTensor: number[][][]
+    priorityTensor: number[][][];
 }
 
-export class StateSpacePointDTOCreate extends PickType(StateSpacePointDTOGet, ["clockTick", "board", "agentStates", "plant", "reporting", "priorityTensor"]) {}
+export class StateSpacePointDTOCreate extends PickType(StateSpacePointDTOGet, [
+    "clockTick",
+    "board",
+    "agentStates",
+    "plant",
+    "reporting",
+    "priorityTensor"
+]) {}

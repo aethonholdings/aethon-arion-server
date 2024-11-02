@@ -11,7 +11,7 @@ import { ModelService } from "../../services/model/model.service";
 describe("Model module: StateSpaceController", () => {
     let controller: StateSpaceController;
     let dataSource: DataSource;
-    let env = environment();
+    const env = environment();
 
     const testingModuleConfig: ModuleMetadata = {
         imports: [TypeOrmModule.forRoot(env.database), TypeOrmModule.forFeature([StateSpacePoint])],

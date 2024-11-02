@@ -29,4 +29,3 @@ export interface ArionOptions {
     randomStreamType: "static" | "random";
     simulationDays: number;
 }
-

@@ -11,18 +11,18 @@ async function bootstrap() {
     const env = environment();
     let options: any = {};
     // allow CORS for localhost dev environment
-    env.root.dev ? (options = { cors: true }) : null; 
+    env.root.dev ? (options = { cors: true }) : null;
     // create the root module
-    const app = await NestFactory.create(RootModule, options); 
-     
+    const app = await NestFactory.create(RootModule, options);
+
     // set global prefix for all routes
-    app.setGlobalPrefix("arion"); 
-    
+    app.setGlobalPrefix("arion");
+
     // allow for large JSON payloads
-    app.use(bodyParser.json({ limit: "50mb" })); 
-    
+    app.use(bodyParser.json({ limit: "50mb" }));
+
     // allow for large URL encoded payloads
-    app.use(bodyParser.urlencoded({ limit: "50mb", extended: true })); 
+    app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
 
     // create the Swagger documentation
     if (env.root.dev) {
@@ -41,8 +41,8 @@ async function bootstrap() {
     }
 
     // add validation pipe
-    app.useGlobalPipes(new ValidationPipe({ disableErrorMessages: env.root.dev ? false : true })); 
-    
+    app.useGlobalPipes(new ValidationPipe({ disableErrorMessages: env.root.dev ? false : true }));
+
     // set up exception filters
     app.useGlobalFilters(new DefaultExceptionFilter());
 

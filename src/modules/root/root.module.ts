@@ -25,6 +25,6 @@ const env = environment();
 })
 export class RootModule {
     constructor(private databaseService: DatabaseService) {
-        (env.database.synchronize)? this.databaseService.purgeDb() : null;
+        env.database.synchronize ? this.databaseService.purgeDb() : null;
     }
 }

@@ -24,7 +24,7 @@ import { nodeId, resultControllerCreateTestData } from "../data/result.controlle
 describe("Model module: run simulation", () => {
     let dataSource: DataSource;
     const controllers: any = {};
-    let env = environment();
+    const env = environment();
 
     const testingModuleConfig: ModuleMetadata = {
         imports: [

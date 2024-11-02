@@ -11,7 +11,7 @@ import { Paginated, Paginator } from "aethon-nestjs-paginate";
 export class SimConfigService {
     private _logger: Logger = new Logger(SimConfigService.name);
     private _dev: boolean = false;
-    private _randomStreamType: "static" | "random" = "random" // toDo: type to RandomStreamType
+    private _randomStreamType: "static" | "random" = "random"; // toDo: type to RandomStreamType
     private _simulationDays = 100;
 
     constructor(
@@ -25,6 +25,7 @@ export class SimConfigService {
     }
 
     next(nodeId: string): Promise<SimConfigDTO> {
+        this._logger.log(`Next simconfig requested by node ${nodeId}`);
         return this.dataSource
             .getRepository(SimConfig)
             .findOne({
@@ -66,8 +67,9 @@ export class SimConfigService {
     }
 
     findAll(paginator: Paginator): Promise<Paginated<SimConfigDTO>> {
-        const source: Repository<SimConfig> = this.dataSource.getRepository(SimConfig)
-        return paginator.run<SimConfig>(source)
+        const source: Repository<SimConfig> = this.dataSource.getRepository(SimConfig);
+        return paginator
+            .run<SimConfig>(source)
             .then((paginated) => {
                 return paginated as Paginated<SimConfigDTO>;
             })
@@ -121,8 +123,8 @@ export class SimConfigService {
                     throw new Error("Incompatible model signature with SimSet");
                 }
             })
-            .then(([simConfig, simSet]) => {
-                return simConfig;
+            .then((results) => {
+                return results[0];
             })
             .catch((err) => {
                 throw this.modelService.error(err, this._logger);

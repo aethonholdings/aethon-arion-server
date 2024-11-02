@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { DataSource } from 'typeorm';
+import { DataSource, Repository } from "typeorm";
 import { Result, StateSpacePoint, SimConfig } from "aethon-arion-db";
 import { Utils, ResultDTO, ResultSet } from "aethon-arion-pipeline";
 import { ModelService } from "../../services/model/model.service";
@@ -13,7 +13,6 @@ export class ResultService {
     private _minRuns: number = 10;
     private _convergenceMargin: number = 0.01;
     private _logger: Logger = new Logger(ResultService.name);
-    private _cache: Result[] = [];
 
     constructor(
         private dataSource: DataSource,
@@ -23,18 +22,6 @@ export class ResultService {
         this._dev = env.root.dev;
         this._storeStateSpace = env.options.storeStateSpace;
         this._minRuns = env.options.minRuns;
-    }
-
-    async onModuleInit() {
-        this._logger.log("Initialising cache");
-        await this.dataSource
-            .getRepository(Result)
-            .find()
-            .then((results) => {
-                this._logger.log("Initialising cache");
-                this._cache = results;
-                this._logger.log(`Cache initialised with ${this._cache.length} results`);
-            });
     }
 
     async create(resultDto: ResultDTO): Promise<ResultDTO> {
@@ -93,14 +80,11 @@ export class ResultService {
 
                 // save everything
                 if (this._dev) this._logger.log("Saving result");
-                return Promise.all([simConfig.save(), simConfig.simSet.save(), result.save()]).then((resultArray) => {
-                    // add the result to the cache
-                    this._cache.push(result[2]);
-                    return resultArray;
-                });
+                return Promise.all([simConfig.save(), simConfig.simSet.save(), result.save()]);
             })
-            .then(([simConfig, simSet, result]) => {
+            .then((results) => {
                 // save the state space if applicable
+                const result = results[2];
                 if (this._dev) this._logger.log("Result saved with id: " + result.id);
                 if (this._storeStateSpace && resultDto.stateSpace && resultDto.stateSpace.length > 0) {
                     if (this._dev) this._logger.log("Saving state space asyncronously");
@@ -124,7 +108,8 @@ export class ResultService {
 
     async findAll(paginator: Paginator): Promise<Paginated<ResultDTO>> {
         try {
-            return paginator.run<Result>(this._cache).then((results) => results as Paginated<ResultDTO>);
+            const repository: Repository<Result> = this.dataSource.getRepository(Result);
+            return paginator.run<Result>(repository).then((results) => results as Paginated<ResultDTO>);
         } catch (err) {
             throw this.modelService.error(err, this._logger);
         }

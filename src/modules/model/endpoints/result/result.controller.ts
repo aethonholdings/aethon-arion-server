@@ -17,15 +17,13 @@ export class ResultController {
         name: "paginateQuery",
         type: PaginateQuery,
         required: false,
-        description: "The pagination query setting out the Where and OrderBy clauses and pagination schema requested",
+        description: "The pagination query setting out the Where and OrderBy clauses and pagination schema requested"
     })
     @ApiOkResponse({
         description: "All result objects retrieved based on the search query given, paginated",
         type: Paginated<ResultDTOGet>
     })
-    async index(
-        @GetPaginator(resultPaginationConfig) paginator: Paginator,
-    ): Promise<Paginated<ResultDTOGet>> {
+    async index(@GetPaginator(resultPaginationConfig) paginator: Paginator): Promise<Paginated<ResultDTOGet>> {
         return this.resultService.findAll(paginator) as Promise<Paginated<ResultDTOGet>>;
     }
 

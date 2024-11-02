@@ -1,10 +1,13 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, Res } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, Query } from "@nestjs/common";
 import { SimSetService } from "./sim-set.service";
 import { ApiBody, ApiOkResponse, ApiParam, ApiTags } from "@nestjs/swagger";
 import { SimSetDTOCreate, SimSetDTOGet } from "../../../../../src/modules/model/dto/sim-set.dto";
 import { ResultDTOGet } from "../../dto/result.dto";
 import { SimConfigDTOGet } from "../../dto/sim-config.dto";
-import { resultPaginationConfig, simConfigPaginationConfig } from "src/modules/model/constants/pagination-config.constants";
+import {
+    resultPaginationConfig,
+    simConfigPaginationConfig
+} from "src/modules/model/constants/pagination-config.constants";
 import { GetPaginator, Paginated, PaginateQuery } from "aethon-nestjs-paginate";
 
 @Controller("sim-set")
@@ -48,7 +51,7 @@ export class SimSetController {
         name: "paginateQuery",
         type: PaginateQuery,
         required: false,
-        description: "The pagination query setting out the Where and OrderBy clauses and pagination schema requested",
+        description: "The pagination query setting out the Where and OrderBy clauses and pagination schema requested"
     })
     @ApiOkResponse({
         type: Paginated<ResultDTOGet>,
@@ -63,7 +66,7 @@ export class SimSetController {
     @ApiParam({
         name: "paginateQuery",
         type: PaginateQuery,
-        description: "The pagination query setting out the Where and OrderBy clauses and pagination schema requested",
+        description: "The pagination query setting out the Where and OrderBy clauses and pagination schema requested"
     })
     @ApiOkResponse({
         type: Paginated<ResultDTOGet>,
