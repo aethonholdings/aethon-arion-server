@@ -2,7 +2,7 @@ import { CallHandler, ExecutionContext, Injectable, Logger, NestInterceptor } fr
 import { APIResponseData } from "aethon-api-types";
 import { Paginated } from "aethon-nestjs-paginate";
 import { map, Observable } from "rxjs";
-import { RequestWithMeta } from "src/common/types/types";
+import { RequestWithMeta } from "src/common/types/server.types";
 import { log } from "src/common/utils/utils";
 
 @Injectable()

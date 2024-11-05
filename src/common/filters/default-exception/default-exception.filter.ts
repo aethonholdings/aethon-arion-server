@@ -3,7 +3,7 @@ import { EntityNotFoundError, QueryFailedError } from "typeorm";
 import { Response } from "express";
 import { APIResponseError } from "aethon-api-types";
 import { HttpArgumentsHost } from "@nestjs/common/interfaces";
-import { RequestWithMeta } from "src/common/types/types";
+import { RequestWithMeta } from "src/common/types/server.types";
 import { log } from "src/common/utils/utils";
 import env from "env/environment";
 

@@ -2,7 +2,7 @@ import environment from "../../../../../env/environment";
 import { C1Configurator, C1ConfiguratorSignature, C1ModelName, C1ReportingVariablesIndex } from "aethon-arion-c1";
 import { Configurator, ConfiguratorParamsDTO, ResultDTO, SimConfigDTO } from "aethon-arion-pipeline";
 import { HttpException, HttpStatus, Injectable, Logger } from "@nestjs/common";
-import { ServerEnvironment } from "src/common/interfaces/server-environment.interfaces";
+import { ServerEnvironment } from "src/common/types/server.types";
 
 @Injectable()
 export class ModelService {

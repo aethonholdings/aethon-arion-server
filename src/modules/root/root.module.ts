@@ -5,6 +5,7 @@ import { DatabaseModule } from "../database/database.module";
 import { ModelModule } from "../model/model.module";
 import { DatabaseService } from "../database/database.service";
 import environment from "../../../env/environment";
+import { OpenAPIModule } from '../openapi/openapi.module';
 
 const env = environment();
 
@@ -20,7 +21,8 @@ const env = environment();
             autoLoadEntities: true
         }),
         DatabaseModule,
-        ModelModule
+        ModelModule,
+        OpenAPIModule
     ]
 })
 export class RootModule {

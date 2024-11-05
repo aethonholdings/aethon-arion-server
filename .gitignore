@@ -42,3 +42,7 @@ lerna-debug.log*
 
 # npm
 .npmrc
+
+# yalc
+.yalc
+yalc.lock

@@ -1,4 +1,4 @@
-import { KeyBuilder } from "src/common/types/types";
+import { KeyBuilder } from "src/common/types/server.types";
 
 export function log(event: string, message: string): string {
     message = message.replace(/\n/g, " ").replace(/\s+/g, " ");

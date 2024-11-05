@@ -1,4 +1,8 @@
-export interface ServerEnvironment {
+export type KeyBuilder = any[];
+
+export type RequestWithMeta = Request & { meta: { id: string; startTimeStamp: number } };
+
+export type ServerEnvironment = {
     root: {
         name: string;
         dev: boolean;
@@ -22,7 +26,7 @@ export interface ServerEnvironment {
     options: ArionOptions;
 }
 
-export interface ArionOptions {
+export type ArionOptions = {
     storeStateSpace: boolean;
     convergenceMargin: number;
     minRuns: number;
