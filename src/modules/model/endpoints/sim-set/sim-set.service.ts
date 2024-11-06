@@ -7,7 +7,7 @@ import { SimConfigService } from "../sim-config/sim-config.service";
 import { ResultService } from "../result/result.service";
 import { ModelService } from "../../services/model/model.service";
 import { SimSetDTOCreate } from "../../dto/sim-set.dto";
-import { Paginated, Paginator } from "aethon-nestjs-paginate";
+import { Comparator, Paginated, Paginator } from "aethon-nestjs-paginate";
 
 @Injectable()
 export class SimSetService {
@@ -46,7 +46,7 @@ export class SimSetService {
 
     findSimConfigs(id: number, paginator: Paginator): Promise<Paginated<SimConfigDTO>> {
         if (this._dev) this._logger.log("Fetching SimSet config data");
-        paginator.query.where = [["simSetId", id.toString()]];
+        paginator.query.where = [["simSetId", Comparator.EQUAL, id.toString()]];
         return this.simConfigService.findAll(paginator).catch((err) => {
             throw this.modelService.error(err, this._logger);
         });
@@ -54,7 +54,7 @@ export class SimSetService {
 
     findResults(simSetId: number, paginator: Paginator): Promise<any> {
         if (this._dev) this._logger.log("Fetching SimSet result data");
-        paginator.query.where = [["simSetId", simSetId.toString()]];
+        paginator.query.where = [["simSetId", Comparator.EQUAL, simSetId.toString()]];
         return this.resultService.findAll(paginator).catch((err) => {
             throw this.modelService.error(err, this._logger);
         });
