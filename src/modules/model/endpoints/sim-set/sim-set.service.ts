@@ -44,14 +44,17 @@ export class SimSetService {
             });
     }
 
-    findSimConfigs(paginator: Paginator): Promise<Paginated<SimConfigDTO>> {
+    findSimConfigs(id: number, paginator: Paginator): Promise<Paginated<SimConfigDTO>> {
+        if (this._dev) this._logger.log("Fetching SimSet config data");
+        paginator.query.where = [["simSetId", id.toString()]];
         return this.simConfigService.findAll(paginator).catch((err) => {
             throw this.modelService.error(err, this._logger);
         });
     }
 
-    findResults(paginator: Paginator): Promise<any> {
+    findResults(simSetId: number, paginator: Paginator): Promise<any> {
         if (this._dev) this._logger.log("Fetching SimSet result data");
+        paginator.query.where = [["simSetId", simSetId.toString()]];
         return this.resultService.findAll(paginator).catch((err) => {
             throw this.modelService.error(err, this._logger);
         });

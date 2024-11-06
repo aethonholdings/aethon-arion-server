@@ -57,8 +57,11 @@ export class SimSetController {
         type: Paginated<ResultDTOGet>,
         description: "A Paginated<Result> object"
     })
-    async results(@GetPaginator(resultPaginationConfig) paginator): Promise<Paginated<ResultDTOGet>> {
-        return this.simSetService.findResults(paginator);
+    async results(
+        @GetPaginator(resultPaginationConfig) paginator,
+        @Param("id") simSetId: number
+    ): Promise<Paginated<ResultDTOGet>> {
+        return this.simSetService.findResults(simSetId, paginator);
     }
 
     // endpoint that fetches an array of SimConfigs for a SimSet
@@ -72,8 +75,8 @@ export class SimSetController {
         type: Paginated<ResultDTOGet>,
         description: "A Paginated<SimConfig> object"
     })
-    simConfigs(@GetPaginator(simConfigPaginationConfig) paginator): Promise<Paginated<SimConfigDTOGet>> {
-        return this.simSetService.findSimConfigs(paginator) as Promise<Paginated<SimConfigDTOGet>>;
+    simConfigs(@GetPaginator(simConfigPaginationConfig) paginator, @Param("id") id: number): Promise<Paginated<SimConfigDTOGet>> {
+        return this.simSetService.findSimConfigs(id, paginator) as Promise<Paginated<SimConfigDTOGet>>;
     }
 
     // endpoint that deletes a SimSet
