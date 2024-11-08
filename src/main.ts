@@ -7,6 +7,7 @@ import { ValidationPipe } from "@nestjs/common";
 import { APIRequestInterceptor } from "./common/interceptors/api-request/api-request.interceptor";
 import { DefaultExceptionFilter } from "./common/filters/default-exception/default-exception.filter";
 import { OpenAPIService } from "./modules/openapi/endpoints/open-api.service";
+import * as fs from "fs";
 
 async function bootstrap() {
     const env = environment();
@@ -38,7 +39,10 @@ async function bootstrap() {
         .addTag("OpenAPI")
         .build();
     const document = SwaggerModule.createDocument(app, config);
-    if (env.root.dev) SwaggerModule.setup("api", app, document, { useGlobalPrefix: true, jsonDocumentUrl: "api/json" });
+    if (env.root.dev) {
+        SwaggerModule.setup("api", app, document, { useGlobalPrefix: true, jsonDocumentUrl: "api/json" });
+        fs.writeFileSync("./swagger/open-api.json", JSON.stringify(document));
+    }
     app.get(OpenAPIService).setSpec(document);
 
     // add validation pipe
