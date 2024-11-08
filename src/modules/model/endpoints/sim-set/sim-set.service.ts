@@ -5,7 +5,7 @@ import { HttpStatus, Injectable, Logger } from "@nestjs/common";
 import { DataSource } from "typeorm";
 import { SimConfigService } from "../sim-config/sim-config.service";
 import { ResultService } from "../result/result.service";
-import { ModelService } from "../../services/model/model.service";
+import { ModelService } from "../../services/model.service";
 import { SimSetDTOCreate } from "../../dto/sim-set.dto";
 import { Comparator, Paginated, Paginator } from "aethon-nestjs-paginate";
 

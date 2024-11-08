@@ -6,7 +6,7 @@ import { DataSource } from "typeorm";
 import { ModuleMetadata } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { Result } from "aethon-arion-db";
-import { ModelService } from "../../services/model/model.service";
+import { ModelService } from "../../services/model.service";
 
 describe("Model module: ResultsController", () => {
     let controller: ResultController;

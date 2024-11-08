@@ -2,7 +2,7 @@ import { StateSpacePoint } from "aethon-arion-db";
 import { StateSpacePointDTO } from "aethon-arion-pipeline";
 import { Injectable, Logger } from "@nestjs/common";
 import { DataSource } from "typeorm";
-import { ModelService } from "../../services/model/model.service";
+import { ModelService } from "../../services/model.service";
 
 @Injectable()
 export class StateSpaceService {

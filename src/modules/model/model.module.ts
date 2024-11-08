@@ -3,7 +3,7 @@ import { SimConfigController } from "./endpoints/sim-config/sim-config.controlle
 import { ResultController } from "./endpoints/result/result.controller";
 import { SimConfigService } from "./endpoints/sim-config/sim-config.service";
 import { ResultService } from "./endpoints/result/result.service";
-import { ModelService } from "./services/model/model.service";
+import { ModelService } from "./services/model.service";
 import { OrgConfigController } from "./endpoints/org-config/org-config.controller";
 import { OrgConfigService } from "./endpoints/org-config/org-config.service";
 import { SimSetController } from "./endpoints/sim-set/sim-set.controller";

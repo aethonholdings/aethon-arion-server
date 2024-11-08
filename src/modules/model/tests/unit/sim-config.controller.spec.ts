@@ -7,7 +7,7 @@ import { SimConfig } from "aethon-arion-db";
 import { Paginator } from "aethon-nestjs-paginate";
 import { SimConfigController } from "../../endpoints/sim-config/sim-config.controller";
 import { SimConfigService } from "../../endpoints/sim-config/sim-config.service";
-import { ModelService } from "../../services/model/model.service";
+import { ModelService } from "../../services/model.service";
 import { indexTestQuery } from "../data/sim-config.controller.test.data";
 import { nodeId } from "../data/result.controller.test.data";
 import { simConfigPaginationConfig } from "src/modules/model/constants/pagination-config.constants";

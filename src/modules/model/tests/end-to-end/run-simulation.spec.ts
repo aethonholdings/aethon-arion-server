@@ -12,7 +12,7 @@ import { OrgConfigService } from "../../endpoints/org-config/org-config.service"
 import { ResultService } from "../../endpoints/result/result.service";
 import { SimConfigService } from "../../endpoints/sim-config/sim-config.service";
 import { SimSetService } from "../../endpoints/sim-set/sim-set.service";
-import { ModelService } from "../../services/model/model.service";
+import { ModelService } from "../../services/model.service";
 import { simSetControllerTestData } from "../data/sim-set.controller.test.data";
 import { orgConfigControllerCreateTestData } from "../data/org-config.controller.test.data";
 import {

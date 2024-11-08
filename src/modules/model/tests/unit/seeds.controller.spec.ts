@@ -2,7 +2,7 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { SeedsController } from "../../endpoints/seeds/seeds.controller";
 import { ModuleMetadata } from "@nestjs/common";
 import { SeedsService } from "../../endpoints/seeds/seeds.service";
-import { ModelService } from "../../services/model/model.service";
+import { ModelService } from "../../services/model.service";
 
 describe("Model module: SeedsController", () => {
     let controller: SeedsController;

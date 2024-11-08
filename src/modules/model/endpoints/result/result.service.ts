@@ -2,7 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { DataSource, Repository } from "typeorm";
 import { Result, StateSpacePoint, SimConfig } from "aethon-arion-db";
 import { Utils, ResultDTO, ResultSet } from "aethon-arion-pipeline";
-import { ModelService } from "../../services/model/model.service";
+import { ModelService } from "../../services/model.service";
 import environment from "../../../../../env/environment";
 import { Paginated, Paginator } from "aethon-nestjs-paginate";
 

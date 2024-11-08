@@ -1,6 +1,6 @@
 import { environment } from "../environment/test.environment";
 import { Test, TestingModule } from "@nestjs/testing";
-import { ModelService } from "../../services/model/model.service";
+import { ModelService } from "../../services/model.service";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { SimSet } from "aethon-arion-db";
 import { DataSource } from "typeorm";

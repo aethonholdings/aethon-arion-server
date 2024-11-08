@@ -1,4 +1,4 @@
-import environment from "../../../../../env/environment";
+import environment from "../../../../env/environment";
 import { C1Configurator, C1ConfiguratorSignature, C1ModelName, C1ReportingVariablesIndex } from "aethon-arion-c1";
 import { Configurator, ConfiguratorParamsDTO, ResultDTO, SimConfigDTO } from "aethon-arion-pipeline";
 import { HttpException, HttpStatus, Injectable, Logger } from "@nestjs/common";

@@ -3,9 +3,8 @@ import { ConfigModule } from "@nestjs/config";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { DatabaseModule } from "../database/database.module";
 import { ModelModule } from "../model/model.module";
-import { DatabaseService } from "../database/database.service";
-import environment from "../../../env/environment";
 import { OpenAPIModule } from '../openapi/openapi.module';
+import environment from "../../../env/environment";
 
 const env = environment();
 
@@ -25,8 +24,4 @@ const env = environment();
         OpenAPIModule
     ]
 })
-export class RootModule {
-    constructor(private databaseService: DatabaseService) {
-        env.database.synchronize ? this.databaseService.purgeDb() : null;
-    }
-}
+export class RootModule {}

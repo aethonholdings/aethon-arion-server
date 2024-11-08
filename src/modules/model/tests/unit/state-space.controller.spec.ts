@@ -6,7 +6,7 @@ import { ModuleMetadata } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { StateSpacePoint } from "aethon-arion-pipeline";
 import { StateSpaceService } from "../../endpoints/state-space/state-space.service";
-import { ModelService } from "../../services/model/model.service";
+import { ModelService } from "../../services/model.service";
 
 describe("Model module: StateSpaceController", () => {
     let controller: StateSpaceController;
