@@ -33,6 +33,7 @@
     "@nestjs/typeorm": "^10.0.2",
     "aethon-api-types": "^0.0.4",
     "aethon-arion-c1": "^0.2.0",
+    "aethon-arion-db": "^0.2.0",
     "aethon-arion-pipeline": "^0.1.3",
     "aethon-nestjs-paginate": "^0.0.4",
     "class-transformer": "^0.5.1",

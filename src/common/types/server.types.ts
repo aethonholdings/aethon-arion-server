@@ -24,7 +24,7 @@ export type ServerEnvironment = {
         ttl: number;
     };
     options: ArionOptions;
-}
+};
 
 export type ArionOptions = {
     storeStateSpace: boolean;
@@ -32,4 +32,4 @@ export type ArionOptions = {
     minRuns: number;
     randomStreamType: "static" | "random";
     simulationDays: number;
-}
+};

@@ -10,7 +10,7 @@ import { SimConfigService } from "../../endpoints/sim-config/sim-config.service"
 import { ModelService } from "../../services/model.service";
 import { indexTestQuery } from "../data/sim-config.controller.test.data";
 import { nodeId } from "../data/result.controller.test.data";
-import { simConfigPaginationConfig } from "src/modules/model/constants/pagination-config.constants";
+import { simConfigPaginationConfig } from "src/modules/core/constants/pagination-config.constants";
 
 describe("Model module: SimConfigController", () => {
     let controller: SimConfigController;

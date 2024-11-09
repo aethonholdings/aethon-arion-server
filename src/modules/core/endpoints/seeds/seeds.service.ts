@@ -9,11 +9,7 @@ export class SeedsService {
     constructor(private modelService: ModelService) {}
 
     async seeds(): Promise<number[]> {
-        try {
-            const seeds = JSON.parse(fs.readFileSync("./data/input/seeds/rand.seeds.json", "utf8")) as number[];
-            return seeds;
-        } catch (err) {
-            throw this.modelService.error(err, this._logger);
-        }
+        const seeds = JSON.parse(fs.readFileSync("./data/input/seeds/rand.seeds.json", "utf8")) as number[];
+        return seeds;
     }
 }

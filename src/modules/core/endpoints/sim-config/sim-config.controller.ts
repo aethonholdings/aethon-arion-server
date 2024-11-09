@@ -4,7 +4,7 @@ import { ApiBody, ApiOkResponse, ApiParam, ApiQuery, ApiTags } from "@nestjs/swa
 import { SimConfigDTOCreate, SimConfigDTOGet } from "../../dto/sim-config.dto";
 import { ResultDTOGet } from "../../dto/result.dto";
 import { GetPaginator, Paginated, PaginateQuery, Paginator } from "aethon-nestjs-paginate";
-import { simConfigPaginationConfig } from "src/modules/model/constants/pagination-config.constants";
+import { simConfigPaginationConfig } from "src/modules/core/constants/pagination-config.constants";
 
 @Controller("sim-config")
 @ApiTags("SimConfig")

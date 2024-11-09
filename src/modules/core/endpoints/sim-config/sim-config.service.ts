@@ -48,51 +48,33 @@ export class SimConfigService {
                         return simConfig;
                     });
                 }
-            })
-            .catch((err) => {
-                throw this.modelService.error(err, this._logger);
             });
     }
 
     findOne(id: number): Promise<SimConfigDTO> {
-        return this.dataSource
-            .getRepository(SimConfig)
-            .findOne({
-                relations: ["orgConfig", "simSet"],
-                where: { id: id }
-            })
-            .catch((err) => {
-                throw this.modelService.error(err, this._logger);
-            });
+        return this.dataSource.getRepository(SimConfig).findOne({
+            relations: ["orgConfig", "simSet"],
+            where: { id: id }
+        });
     }
 
     findAll(paginator: Paginator): Promise<Paginated<SimConfigDTO>> {
         const source: Repository<SimConfig> = this.dataSource.getRepository(SimConfig);
-        return paginator
-            .run<SimConfig>(source)
-            .then((paginated) => {
-                return paginated as Paginated<SimConfigDTO>;
-            })
-            .catch((err) => {
-                throw this.modelService.error(err, this._logger);
-            });
+        return paginator.run<SimConfig>(source).then((paginated) => {
+            return paginated as Paginated<SimConfigDTO>;
+        });
     }
 
     findResults(id: number): Promise<ResultDTO[]> {
-        return this.dataSource
-            .getRepository(Result)
-            .find({
-                relations: {
-                    simConfig: {
-                        orgConfig: true,
-                        simSet: true
-                    }
-                },
-                where: { simConfigId: id }
-            })
-            .catch((err) => {
-                throw this.modelService.error(err, this._logger);
-            });
+        return this.dataSource.getRepository(Result).find({
+            relations: {
+                simConfig: {
+                    orgConfig: true,
+                    simSet: true
+                }
+            },
+            where: { simConfigId: id }
+        });
     }
 
     create(simConfigDTO: SimConfigDTOCreate): Promise<SimConfigDTO> {
@@ -125,27 +107,20 @@ export class SimConfigService {
             })
             .then((results) => {
                 return results[0];
-            })
-            .catch((err) => {
-                throw this.modelService.error(err, this._logger);
             });
     }
 
     delete(id: number): Promise<number> {
-        try {
-            const repository = this.dataSource.getRepository(SimConfig);
-            // adjust the simset simconfig counter
-            return repository
-                .findOneOrFail({ where: { id: id } })
-                .then((simConfig) => {
-                    simConfig.simSet.simConfigCount--;
-                    return simConfig.simSet.save();
-                })
-                .then(() => {
-                    return this.modelService.deleteRecord(id, this._logger, this.dataSource.getRepository(SimConfig));
-                });
-        } catch (err) {
-            throw this.modelService.error(err, this._logger);
-        }
+        const repository = this.dataSource.getRepository(SimConfig);
+        // adjust the simset simconfig counter
+        return repository
+            .findOneOrFail({ where: { id: id } })
+            .then((simConfig) => {
+                simConfig.simSet.simConfigCount--;
+                return simConfig.simSet.save();
+            })
+            .then(() => {
+                return this.modelService.deleteRecord(id, this._logger, this.dataSource.getRepository(SimConfig));
+            });
     }
 }

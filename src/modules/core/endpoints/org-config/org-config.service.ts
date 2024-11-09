@@ -14,24 +14,14 @@ export class OrgConfigService {
     ) {}
 
     findOne(id: number): Promise<OrgConfigDTO> {
-        return this.dataSource
-            .getRepository(OrgConfig)
-            .findOneOrFail({
-                where: { id: id },
-                relations: { simConfigs: true }
-            })
-            .catch((err) => {
-                throw this.modelService.error(err, this._logger);
-            });
+        return this.dataSource.getRepository(OrgConfig).findOneOrFail({
+            where: { id: id },
+            relations: { simConfigs: true }
+        });
     }
 
     findAll(type?: string): Promise<OrgConfigDTO[]> {
-        return this.dataSource
-            .getRepository(OrgConfig)
-            .find({ where: { type: type } })
-            .catch((err) => {
-                throw this.modelService.error(err, this._logger);
-            });
+        return this.dataSource.getRepository(OrgConfig).find({ where: { type: type } });
     }
 
     create(configuratorParamsDTO: ConfiguratorParamsDTO): Promise<OrgConfigDTO> {
@@ -39,17 +29,13 @@ export class OrgConfigService {
             const configurator = this.modelService.getConfigurator(configuratorParamsDTO);
             if (!configurator) return reject(new Error("Invalid configurator name"));
             return resolve(configurator.generate(configuratorParamsDTO));
-        })
-            .then((orgConfigDTO: OrgConfigDTO) => {
-                const toSave = {
-                    ...orgConfigDTO,
-                    configuratorName: configuratorParamsDTO.configuratorName
-                };
-                return this.dataSource.getRepository(OrgConfig).save(toSave);
-            })
-            .catch((err) => {
-                throw this.modelService.error(err, this._logger);
-            });
+        }).then((orgConfigDTO: OrgConfigDTO) => {
+            const toSave = {
+                ...orgConfigDTO,
+                configuratorName: configuratorParamsDTO.configuratorName
+            };
+            return this.dataSource.getRepository(OrgConfig).save(toSave);
+        });
     }
 
     delete(id: number): Promise<number> {

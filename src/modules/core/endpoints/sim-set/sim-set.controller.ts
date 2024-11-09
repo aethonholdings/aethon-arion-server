@@ -1,13 +1,13 @@
 import { Body, Controller, Delete, Get, Param, Post, Query } from "@nestjs/common";
 import { SimSetService } from "./sim-set.service";
 import { ApiBody, ApiOkResponse, ApiParam, ApiTags } from "@nestjs/swagger";
-import { SimSetDTOCreate, SimSetDTOGet } from "../../../../../src/modules/model/dto/sim-set.dto";
+import { SimSetDTOCreate, SimSetDTOGet } from "../../dto/sim-set.dto";
 import { ResultDTOGet } from "../../dto/result.dto";
 import { SimConfigDTOGet } from "../../dto/sim-config.dto";
 import {
     resultPaginationConfig,
     simConfigPaginationConfig
-} from "src/modules/model/constants/pagination-config.constants";
+} from "src/modules/core/constants/pagination-config.constants";
 import { GetPaginator, Paginated, PaginateQuery } from "aethon-nestjs-paginate";
 
 @Controller("sim-set")
@@ -75,7 +75,10 @@ export class SimSetController {
         type: Paginated<ResultDTOGet>,
         description: "A Paginated<SimConfig> object"
     })
-    simConfigs(@GetPaginator(simConfigPaginationConfig) paginator, @Param("id") id: number): Promise<Paginated<SimConfigDTOGet>> {
+    simConfigs(
+        @GetPaginator(simConfigPaginationConfig) paginator,
+        @Param("id") id: number
+    ): Promise<Paginated<SimConfigDTOGet>> {
         return this.simSetService.findSimConfigs(id, paginator) as Promise<Paginated<SimConfigDTOGet>>;
     }
 

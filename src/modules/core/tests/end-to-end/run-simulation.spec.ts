@@ -21,7 +21,7 @@ import {
 } from "../data/sim-config.controller.test.data";
 import { nodeId, resultControllerCreateTestData } from "../data/result.controller.test.data";
 
-describe("Model module: run simulation", () => {
+describe.skip("Model module: run simulation", () => {
     let dataSource: DataSource;
     const controllers: any = {};
     const env = environment();

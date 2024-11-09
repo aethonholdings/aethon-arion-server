@@ -24,51 +24,33 @@ export class SimSetService {
     }
 
     findAll(query: any): Promise<SimSetDTO[]> {
-        return this.dataSource
-            .getRepository(SimSet)
-            .find(query)
-            .catch((err) => {
-                throw this.modelService.error(err, this._logger);
-            });
+        return this.dataSource.getRepository(SimSet).find(query);
     }
 
     findOne(id: number): Promise<SimSetDTO> {
-        return this.dataSource
-            .getRepository(SimSet)
-            .findOneOrFail({
-                relations: ["simConfigs"],
-                where: { id: id }
-            })
-            .catch((err) => {
-                throw this.modelService.error(err, this._logger, err.message, HttpStatus.NOT_FOUND);
-            });
+        return this.dataSource.getRepository(SimSet).findOneOrFail({
+            relations: ["simConfigs"],
+            where: { id: id }
+        });
     }
 
     findSimConfigs(id: number, paginator: Paginator): Promise<Paginated<SimConfigDTO>> {
         if (this._dev) this._logger.log("Fetching SimSet config data");
         paginator.query.where = [["simSetId", Comparator.EQUAL, id.toString()]];
-        return this.simConfigService.findAll(paginator).catch((err) => {
-            throw this.modelService.error(err, this._logger);
-        });
+        return this.simConfigService.findAll(paginator);
     }
 
     findResults(simSetId: number, paginator: Paginator): Promise<any> {
         if (this._dev) this._logger.log("Fetching SimSet result data");
         paginator.query.where = [["simSetId", Comparator.EQUAL, simSetId.toString()]];
-        return this.resultService.findAll(paginator).catch((err) => {
-            throw this.modelService.error(err, this._logger);
-        });
+        return this.resultService.findAll(paginator);
     }
 
     create(simSet: SimSetDTOCreate): Promise<SimSetDTO> {
-        try {
-            if (this.modelService.getModelNames().includes(simSet.type)) {
-                return this.dataSource.getRepository(SimSet).save(simSet);
-            } else {
-                throw new Error("Invalid model type");
-            }
-        } catch (err) {
-            throw this.modelService.error(err, this._logger);
+        if (this.modelService.getModelNames().includes(simSet.type)) {
+            return this.dataSource.getRepository(SimSet).save(simSet);
+        } else {
+            throw new Error("Invalid model type");
         }
     }
 

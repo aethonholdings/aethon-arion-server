@@ -2,8 +2,8 @@ import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { DatabaseModule } from "../database/database.module";
-import { ModelModule } from "../model/model.module";
-import { OpenAPIModule } from '../openapi/openapi.module';
+import { CoreModule } from "../core/core.module";
+import { OpenAPIModule } from "../openapi/openapi.module";
 import environment from "../../../env/environment";
 
 const env = environment();
@@ -20,7 +20,7 @@ const env = environment();
             autoLoadEntities: true
         }),
         DatabaseModule,
-        ModelModule,
+        CoreModule,
         OpenAPIModule
     ]
 })

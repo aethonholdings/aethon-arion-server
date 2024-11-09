@@ -1,7 +1,7 @@
 import environment from "../../../../env/environment";
 import { C1Configurator, C1ConfiguratorSignature, C1ModelName, C1ReportingVariablesIndex } from "aethon-arion-c1";
 import { Configurator, ConfiguratorParamsDTO, ResultDTO, SimConfigDTO } from "aethon-arion-pipeline";
-import { HttpException, HttpStatus, Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { ServerEnvironment } from "src/common/types/server.types";
 
 @Injectable()
@@ -38,28 +38,10 @@ export class ModelService {
         return performance;
     }
 
-    error(
-        err: Error,
-        logger?: Logger,
-        message: string = "Invalid query",
-        httpStatus: HttpStatus = HttpStatus.BAD_REQUEST
-    ): HttpException {
-        logger ? logger.log(err.message) : null;
-        if (this._dev) {
-            message = err.message;
-        }
-        return new HttpException(message, httpStatus);
-    }
-
     deleteRecord(id: number, logger: Logger, repository: any): Promise<number> {
-        return repository
-            .delete({ id: id })
-            .then((result) => {
-                if (result.affected) return id;
-                else throw new Error("No record found");
-            })
-            .catch((err) => {
-                throw this.error(err, logger);
-            });
+        return repository.delete({ id: id }).then((result) => {
+            if (result.affected) return id;
+            else throw new Error("No record found");
+        });
     }
 }

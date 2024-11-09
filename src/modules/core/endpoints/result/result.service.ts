@@ -100,33 +100,22 @@ export class ResultService {
                 }
                 if (this._dev) this._logger.log("Result " + result.id + " successfully created");
                 return result;
-            })
-            .catch((err) => {
-                throw this.modelService.error(err, this._logger);
             });
     }
 
     async findAll(paginator: Paginator): Promise<Paginated<ResultDTO>> {
-        try {
-            const repository: Repository<Result> = this.dataSource.getRepository(Result);
-            return paginator.run<Result>(repository).then((results) => results as Paginated<ResultDTO>);
-        } catch (err) {
-            throw this.modelService.error(err, this._logger);
-        }
+        const repository: Repository<Result> = this.dataSource.getRepository(Result);
+        return paginator.run<Result>(repository).then((results) => results as Paginated<ResultDTO>);
     }
 
     async findOne(id: number): Promise<ResultDTO> {
-        try {
-            return this.dataSource.getRepository(Result).findOneOrFail({
-                where: { id: id },
-                relations: {
-                    simConfig: {
-                        orgConfig: true
-                    }
+        return this.dataSource.getRepository(Result).findOneOrFail({
+            where: { id: id },
+            relations: {
+                simConfig: {
+                    orgConfig: true
                 }
-            });
-        } catch (err) {
-            throw this.modelService.error(err, this._logger);
-        }
+            }
+        });
     }
 }

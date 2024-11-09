@@ -4,7 +4,7 @@ import { ResultDTO } from "aethon-arion-pipeline";
 import { ApiBody, ApiOkResponse, ApiParam, ApiQuery, ApiTags } from "@nestjs/swagger";
 import { ResultDTOCreate, ResultDTOGet } from "../../dto/result.dto";
 import { Paginated, GetPaginator, PaginateQuery, Paginator } from "aethon-nestjs-paginate";
-import { resultPaginationConfig } from "src/modules/model/constants/pagination-config.constants";
+import { resultPaginationConfig } from "src/modules/core/constants/pagination-config.constants";
 
 @Controller("result")
 @ApiTags("Result")

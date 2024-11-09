@@ -10,11 +10,11 @@ export class DatabaseService {
     entities: any[] = [SimSet, OrgConfig, SimConfig, Result, StateSpacePoint];
     constructor(private dataSource: DataSource) {}
 
-    async onApplicationBootstrap() {  
-        if(this._dbConfig.synchronize) {
+    async onApplicationBootstrap() {
+        if (this._dbConfig.synchronize) {
             await this.purgeDb();
             await this.seedDB();
-        };
+        }
     }
 
     async purgeDb() {
@@ -30,7 +30,5 @@ export class DatabaseService {
         await this.dataSource.query(`SET FOREIGN_KEY_CHECKS = 1;`);
     }
 
-    async seedDB() {
-        
-    }
+    async seedDB() {}
 }

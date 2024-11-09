@@ -13,14 +13,9 @@ export class StateSpaceService {
     ) {}
 
     find(resultId: number): Promise<StateSpacePointDTO[]> {
-        return this.dataSource
-            .getRepository(StateSpacePoint)
-            .find({
-                where: { resultId: resultId },
-                order: { clockTick: "ASC" }
-            })
-            .catch((err) => {
-                throw this.modelService.error(err, this._logger);
-            });
+        return this.dataSource.getRepository(StateSpacePoint).find({
+            where: { resultId: resultId },
+            order: { clockTick: "ASC" }
+        });
     }
 }
