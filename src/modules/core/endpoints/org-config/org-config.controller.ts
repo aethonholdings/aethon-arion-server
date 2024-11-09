@@ -1,8 +1,8 @@
 import { Body, Controller, Delete, Get, Param, Post, Query } from "@nestjs/common";
 import { OrgConfigService } from "./org-config.service";
 import { ApiBody, ApiOkResponse, ApiParam, ApiQuery, ApiTags } from "@nestjs/swagger";
-import { ConfiguratorParamsDTOCreate } from "../../dto/configurator-param.dto";
-import { OrgConfigDTOGet } from "../../dto/org-config.dto";
+import { ConfiguratorParamsDTOCreate } from "../../../../common/dto/configurator-param.dto";
+import { OrgConfigDTOGet } from "../../../../common/dto/org-config.dto";
 
 @Controller("org-config")
 @ApiTags("OrgConfig")

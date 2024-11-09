@@ -1,9 +1,9 @@
 import { Body, Controller, Delete, Get, Param, Post, Query } from "@nestjs/common";
 import { SimSetService } from "./sim-set.service";
 import { ApiBody, ApiOkResponse, ApiParam, ApiTags } from "@nestjs/swagger";
-import { SimSetDTOCreate, SimSetDTOGet } from "../../dto/sim-set.dto";
-import { ResultDTOGet } from "../../dto/result.dto";
-import { SimConfigDTOGet } from "../../dto/sim-config.dto";
+import { SimSetDTOCreate, SimSetDTOGet } from "../../../../common/dto/sim-set.dto";
+import { ResultDTOGet } from "../../../../common/dto/result.dto";
+import { SimConfigDTOGet } from "../../../../common/dto/sim-config.dto";
 import {
     resultPaginationConfig,
     simConfigPaginationConfig

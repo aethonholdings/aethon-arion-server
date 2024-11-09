@@ -1,8 +1,8 @@
 import { Body, Controller, Delete, Get, Param, Post, Query } from "@nestjs/common";
 import { SimConfigService } from "./sim-config.service";
 import { ApiBody, ApiOkResponse, ApiParam, ApiQuery, ApiTags } from "@nestjs/swagger";
-import { SimConfigDTOCreate, SimConfigDTOGet } from "../../dto/sim-config.dto";
-import { ResultDTOGet } from "../../dto/result.dto";
+import { SimConfigDTOCreate, SimConfigDTOGet } from "../../../../common/dto/sim-config.dto";
+import { ResultDTOGet } from "../../../../common/dto/result.dto";
 import { GetPaginator, Paginated, PaginateQuery, Paginator } from "aethon-nestjs-paginate";
 import { simConfigPaginationConfig } from "src/modules/core/constants/pagination-config.constants";
 

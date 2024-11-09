@@ -1,7 +1,7 @@
 import { Controller, Get, Param } from "@nestjs/common";
 import { StateSpaceService } from "./state-space.service";
 import { ApiParam, ApiTags } from "@nestjs/swagger";
-import { StateSpacePointDTOGet } from "../../dto/state-space.dto";
+import { StateSpacePointDTOGet } from "../../../../common/dto/state-space.dto";
 
 @Controller("state-space")
 @ApiTags("StateSpace")

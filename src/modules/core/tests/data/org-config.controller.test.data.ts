@@ -1,4 +1,4 @@
-import { ConfiguratorParamsDTOCreate } from "../../dto/configurator-param.dto";
+import { ConfiguratorParamsDTOCreate } from "../../../../common/dto/configurator-param.dto";
 
 export const orgConfigControllerCreateTestData: { [key: string]: ConfiguratorParamsDTOCreate } = {
     basic: {
