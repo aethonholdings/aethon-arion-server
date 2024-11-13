@@ -13,7 +13,6 @@ export class DatabaseService {
     async onApplicationBootstrap() {
         if (this._dbConfig.synchronize) {
             await this.purgeDb();
-            await this.seedDB();
         }
     }
 
@@ -30,5 +29,4 @@ export class DatabaseService {
         await this.dataSource.query(`SET FOREIGN_KEY_CHECKS = 1;`);
     }
 
-    async seedDB() {}
 }

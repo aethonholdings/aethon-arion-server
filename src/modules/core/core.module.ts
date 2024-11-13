@@ -12,10 +12,9 @@ import { StateSpaceController } from "./endpoints/state-space/state-space.contro
 import { StateSpaceService } from "./endpoints/state-space/state-space.service";
 import { SeedsController } from "./endpoints/seeds/seeds.controller";
 import { SeedsService } from "./endpoints/seeds/seeds.service";
-import { C1Module } from "../c1/c1.module";
 
 @Module({
-    imports: [C1Module],
+    imports: [],
     controllers: [
         SimConfigController,
         ResultController,
