@@ -1,3 +1,4 @@
+import { C1 } from "aethon-arion-c1";
 import { ServerEnvironment } from "src/common/types/server.types";
 
 export default () =>
@@ -21,6 +22,7 @@ export default () =>
             convergenceMargin: 0.001,
             minRuns: 10,
             randomStreamType: "random",
-            simulationDays: 100
+            simulationDays: 100,
+            models: [C1],
         }
     }) as ServerEnvironment;

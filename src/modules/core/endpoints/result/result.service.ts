@@ -29,7 +29,7 @@ export class ResultService {
             .getRepository(SimConfig)
             .findOneOrFail({
                 where: { id: resultDto.simConfigId },
-                relations: ["orgConfig", "simSet", "results"]
+                relations: { orgConfig: { configuratorParams: true }, simSet: true, results: true }
             })
             .then((simConfig) => {
                 // create the result object

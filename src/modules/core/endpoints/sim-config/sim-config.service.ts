@@ -29,7 +29,12 @@ export class SimConfigService {
         return this.dataSource
             .getRepository(SimConfig)
             .findOne({
-                relations: ["orgConfig", "simSet"],
+                relations: {
+                    orgConfig: {
+                        configuratorParams: true
+                    },
+                    simSet: true
+                },
                 where: { converged: false },
                 order: { id: "ASC" }
             })

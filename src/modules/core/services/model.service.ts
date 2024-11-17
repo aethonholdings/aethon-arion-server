@@ -1,18 +1,18 @@
 import environment from "../../../../env/environment";
-import { C1Configurator, C1ConfiguratorSignature, C1ModelName, C1ReportingVariablesIndex } from "aethon-arion-c1";
-import { Configurator, ConfiguratorParamsDTO, ResultDTO, SimConfigDTO } from "aethon-arion-pipeline";
+import { Configurator, ConfiguratorParamsDTO, Model, ResultDTO, SimConfigDTO } from "aethon-arion-pipeline";
 import { Injectable, Logger } from "@nestjs/common";
 import { ServerEnvironment } from "src/common/types/server.types";
 
 @Injectable()
 export class ModelService {
-    private _configurators: Map<string, Configurator> = new Map<string, Configurator>();
-    private _modelNames: string[] = ["C1"];
+    private _modelNames: string[];
     private _dev: boolean = false;
+    private _models: Model[] = [];
 
     constructor() {
         const env: ServerEnvironment = environment();
-        this._configurators.set(C1ConfiguratorSignature.name, new C1Configurator());
+        this._models = env.options.models;
+        this._modelNames = this._models.map((model) => model.getName());
         this._dev = env.root.dev;
     }
 
@@ -21,19 +21,21 @@ export class ModelService {
     }
 
     getConfigurator(configuratorParamsDTO: ConfiguratorParamsDTO): Configurator {
-        return this._configurators.get(configuratorParamsDTO.configuratorName);
+        return this._models
+            .find((model) => model.getName() === configuratorParamsDTO.modelName)
+            .getConfigurator(configuratorParamsDTO.configuratorName);
+    }
+
+    getModel(modelName: string): Model {
+        return this._models.find((model) => model.getName() === modelName);
     }
 
     calculatePerformance(simConfig: SimConfigDTO, result: ResultDTO): number {
         let performance: number;
-        switch (simConfig.orgConfig.type) {
-            case C1ModelName: {
-                performance = result.reporting[C1ReportingVariablesIndex.REVENUE] / result.priorityTensor.length;
-                break;
-            }
-            default: {
-                performance = 0;
-            }
+        try {
+            performance = this.getModel(simConfig.orgConfig.type).getPerformance(result);
+        } catch (error) {
+            performance = 0;
         }
         return performance;
     }

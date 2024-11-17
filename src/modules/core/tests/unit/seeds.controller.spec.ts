@@ -6,7 +6,7 @@ import { ModelService } from "../../services/model.service";
 
 describe("Model module: SeedsController", () => {
     let controller: SeedsController;
-
+    
     const testingModuleConfig: ModuleMetadata = {
         controllers: [SeedsController],
         providers: [SeedsService, ModelService]

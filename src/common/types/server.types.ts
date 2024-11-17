@@ -1,3 +1,5 @@
+import { Model } from "aethon-arion-pipeline";
+
 export type KeyBuilder = any[];
 
 export type RequestWithMeta = Request & { meta: { id: string; startTimeStamp: number } };
@@ -32,4 +34,5 @@ export type ArionOptions = {
     minRuns: number;
     randomStreamType: "static" | "random";
     simulationDays: number;
+    models: Model[];
 };
