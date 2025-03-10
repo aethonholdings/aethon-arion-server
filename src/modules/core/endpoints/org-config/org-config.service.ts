@@ -1,5 +1,5 @@
-import { OrgConfig } from "aethon-arion-db";
-import { ConfiguratorParamsDTO, OrgConfigDTO } from "aethon-arion-pipeline";
+import { ConfiguratorParams, OrgConfig } from "aethon-arion-db";
+import { ConfiguratorParamData, ConfiguratorParamsDTO, ObjectHash, OrgConfigDTO } from "aethon-arion-pipeline";
 import { Injectable, Logger } from "@nestjs/common";
 import { DataSource } from "typeorm";
 import { ModelService } from "../../services/model.service";
@@ -14,28 +14,60 @@ export class OrgConfigService {
     ) {}
 
     findOne(id: number): Promise<OrgConfigDTO> {
-        return this.dataSource.getRepository(OrgConfig).findOneOrFail({
-            where: { id: id },
-            relations: { simConfigs: true }
-        });
+        return this.dataSource
+            .getRepository(OrgConfig)
+            .findOneOrFail({
+                where: { id: id },
+                relations: { simConfigs: { simConfigParams: true, simSet: false }, configuratorParams: true }
+            })
+            .then((orgConfig: OrgConfig) => {
+                return orgConfig.toDTO();
+            });
     }
 
     findAll(type?: string): Promise<OrgConfigDTO[]> {
-        return this.dataSource.getRepository(OrgConfig).find({ where: { type: type } });
+        return this.dataSource
+            .getRepository(OrgConfig)
+            .find({ where: { configuratorParams: { modelName: type } }, relations: { configuratorParams: true } })
+            .then((orgConfigs: OrgConfig[]) => {
+                return orgConfigs.map((orgConfig) => orgConfig.toDTO());
+            });
     }
 
-    create(configuratorParamsDTO: ConfiguratorParamsDTO): Promise<OrgConfigDTO> {
+    async create(configuratorParamsDTO: ConfiguratorParamsDTO<ConfiguratorParamData>): Promise<OrgConfigDTO> {
         return new Promise((resolve, reject) => {
-            const configurator = this.modelService.getConfigurator(configuratorParamsDTO);
-            if (!configurator) return reject(new Error("Invalid configurator name"));
-            return resolve(configurator.generate(configuratorParamsDTO));
-        }).then((orgConfigDTO: OrgConfigDTO) => {
-            const toSave = {
-                ...orgConfigDTO,
-                configuratorName: configuratorParamsDTO.configuratorName
-            };
-            return this.dataSource.getRepository(OrgConfig).save(toSave);
-        });
+            const model = this.modelService.getModel(configuratorParamsDTO.modelName);
+            if (!model) return reject(new Error("Invalid model name"));
+            return resolve(model.createOrganisation(configuratorParamsDTO));
+        })
+            .then((orgConfigDTO: OrgConfigDTO) => {
+                // find the configurator param object based on the object hash
+                const hash = new ObjectHash(configuratorParamsDTO).toString();
+                return this.dataSource
+                    .getRepository(ConfiguratorParams)
+                    .findOne({
+                        where: { hash: hash }
+                    })
+                    .then(async (configuratorParams: ConfiguratorParams) => {
+                        if (!configuratorParams) {
+                            return await this.dataSource.getRepository(ConfiguratorParams).save({
+                                modelName: configuratorParamsDTO.modelName,
+                                configuratorName: configuratorParamsDTO.configuratorName,
+                                data: configuratorParamsDTO.data,
+                                hash: hash
+                            });
+                        } else return configuratorParams;
+                    })
+                    .then((configuratorParams: ConfiguratorParams) => {
+                        return {
+                            ...orgConfigDTO,
+                            configuratorParams: configuratorParams
+                        } as OrgConfigDTO;
+                    });
+            })
+            .then(async (orgConfigDTO: OrgConfigDTO) => {
+                return await this.dataSource.getRepository(OrgConfig).save(orgConfigDTO);
+            });
     }
 
     delete(id: number): Promise<number> {

@@ -2,12 +2,20 @@ import { Injectable } from "@nestjs/common";
 import { DataSource } from "typeorm";
 import env from "../../../../env/environment";
 
-import { SimConfig, SimSet, OrgConfig, Result, StateSpacePoint } from "aethon-arion-db";
+import {
+    SimConfig,
+    SimSet,
+    OrgConfig,
+    Result,
+    StateSpacePoint,
+    ConfiguratorParams,
+    SimConfigParams
+} from "aethon-arion-db";
 
 @Injectable()
 export class DatabaseService {
     private _dbConfig = env().database;
-    entities: any[] = [SimSet, OrgConfig, SimConfig, Result, StateSpacePoint];
+    entities: any[] = [SimSet, OrgConfig, SimConfig, Result, StateSpacePoint, ConfiguratorParams, SimConfigParams];
     constructor(private dataSource: DataSource) {}
 
     async onApplicationBootstrap() {
@@ -28,5 +36,4 @@ export class DatabaseService {
         }
         await this.dataSource.query(`SET FOREIGN_KEY_CHECKS = 1;`);
     }
-
 }

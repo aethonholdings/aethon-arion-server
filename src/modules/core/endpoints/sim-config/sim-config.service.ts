@@ -50,23 +50,34 @@ export class SimConfigService {
                     });
                     return simConfig.save().then((simConfig) => {
                         if (this._dev) this._logger.log("SimConfig updated");
-                        return simConfig;
+                        return simConfig.toDTO();
                     });
                 }
             });
     }
 
     findOne(id: number): Promise<SimConfigDTO> {
-        return this.dataSource.getRepository(SimConfig).findOne({
-            relations: ["orgConfig", "simSet"],
-            where: { id: id }
-        });
+        return this.dataSource
+            .getRepository(SimConfig)
+            .findOne({
+                relations: ["orgConfig", "simSet"],
+                where: { id: id }
+            })
+            .then((simConfig) => {
+                return simConfig.toDTO();
+            });
     }
 
     findAll(paginator: Paginator): Promise<Paginated<SimConfigDTO>> {
         const source: Repository<SimConfig> = this.dataSource.getRepository(SimConfig);
-        return paginator.run<SimConfig>(source).then((paginated) => {
-            return paginated as Paginated<SimConfigDTO>;
+        return paginator.run<SimConfig>(source).then((paginated: Paginated<SimConfig>) => {
+            let tmp: Paginated<SimConfigDTO> = {
+                ...paginated,
+                data: paginated.data.map((simConfig) => {
+                    return simConfig.toDTO();
+                })
+            };
+            return tmp;
         });
     }
 
@@ -79,18 +90,22 @@ export class SimConfigService {
                 }
             },
             where: { simConfigId: id }
+        }).then((results: Result[]) => {
+            return results.map((result) => result.toDTO());
         });
     }
 
     create(simConfigDTO: SimConfigDTOCreate): Promise<SimConfigDTO> {
         const queries = Promise.all([
             this.dataSource.getRepository(SimSet).findOneOrFail({ where: { id: simConfigDTO.simSetId } }),
-            this.dataSource.getRepository(OrgConfig).findOneOrFail({ where: { id: simConfigDTO.orgConfigId } })
+            this.dataSource
+                .getRepository(OrgConfig)
+                .findOneOrFail({ where: { id: simConfigDTO.orgConfigId }, relations: { configuratorParams: true } })
         ]);
 
         return queries
             .then(([simSet, orgConfig]) => {
-                if (simSet && orgConfig && orgConfig.type === simSet.type) {
+                if (simSet && orgConfig && orgConfig.configuratorParams.modelName === simSet.type) {
                     simSet.simConfigCount++;
                     const simConfig = this.dataSource.getRepository(SimConfig).save({
                         simSet: simSet,
@@ -111,7 +126,7 @@ export class SimConfigService {
                 }
             })
             .then((results) => {
-                return results[0];
+                return results[0].toDTO();
             });
     }
 

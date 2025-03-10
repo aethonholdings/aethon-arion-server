@@ -1,5 +1,9 @@
 import environment from "../../../../env/environment";
-import { Configurator, ConfiguratorParamsDTO, Model, ResultDTO, SimConfigDTO } from "aethon-arion-pipeline";
+import {
+    Model,
+    ResultDTO,
+    SimConfigDTO
+} from "aethon-arion-pipeline";
 import { Injectable, Logger } from "@nestjs/common";
 import { ServerEnvironment } from "src/common/types/server.types";
 
@@ -18,12 +22,6 @@ export class ModelService {
 
     getModelNames(): string[] {
         return this._modelNames;
-    }
-
-    getConfigurator(configuratorParamsDTO: ConfiguratorParamsDTO): Configurator {
-        return this._models
-            .find((model) => model.getName() === configuratorParamsDTO.modelName)
-            .getConfigurator(configuratorParamsDTO.configuratorName);
     }
 
     getModel(modelName: string): Model {

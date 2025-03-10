@@ -2,7 +2,7 @@ import { ApiProperty, PickType } from "@nestjs/swagger";
 import { StateSpacePointDTOCreate } from "./state-space.dto";
 import { IsArray, IsDate, IsNumber, IsObject, IsOptional, IsString, ValidateNested } from "class-validator";
 import { Transform, Type } from "class-transformer";
-import { ConfiguratorParamsDTO, SimConfigDTO } from "aethon-arion-pipeline";
+import { ConfiguratorParamData, ConfiguratorParamsDTO, SimConfigDTO } from "aethon-arion-pipeline";
 import { ConfiguratorParamsDTOGet } from "./configurator-param.dto";
 
 export class ResultDTOGet {
@@ -609,7 +609,7 @@ export class ResultDTOGet {
             }
         }
     })
-    configuratorParams: ConfiguratorParamsDTO;
+    configuratorParams: ConfiguratorParamsDTO<ConfiguratorParamData>;
 }
 
 export class ResultDTOCreate extends PickType(ResultDTOGet, [

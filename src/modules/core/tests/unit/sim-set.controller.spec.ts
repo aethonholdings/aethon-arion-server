@@ -3,8 +3,8 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { ModelService } from "../../services/model.service";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { SimSet } from "aethon-arion-db";
-import { DataSource } from "typeorm";
-import { HttpException, ModuleMetadata } from "@nestjs/common";
+import { DataSource, EntityNotFoundError } from "typeorm";
+import { ModuleMetadata } from "@nestjs/common";
 import { simSetControllerTestData } from "../data/sim-set.controller.test.data";
 import { SimSetController } from "../../endpoints/sim-set/sim-set.controller";
 import { SimSetService } from "../../endpoints/sim-set/sim-set.service";
@@ -49,7 +49,7 @@ describe("Model module: SimSetController", () => {
         try {
             await controller.view(create.id);
         } catch (error) {
-            expect(error).toBeInstanceOf(HttpException);
+            expect(error).toBeInstanceOf(EntityNotFoundError);
         }
     });
 

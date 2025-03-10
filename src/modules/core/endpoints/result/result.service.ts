@@ -29,24 +29,29 @@ export class ResultService {
             .getRepository(SimConfig)
             .findOneOrFail({
                 where: { id: resultDto.simConfigId },
-                relations: { orgConfig: { configuratorParams: true }, simSet: true, results: true }
+                relations: {
+                    orgConfig: { configuratorParams: true },
+                    simSet: true,
+                    results: true,
+                    simConfigParams: true
+                }
             })
             .then((simConfig) => {
                 // create the result object
                 if (this._dev) this._logger.log("Creating result object");
-                const result = Result.create(resultDto);
+                const result = this.dataSource.getRepository(Result).create(resultDto);
                 result.orgConfigId = simConfig.orgConfig.id;
                 result.simSetId = simConfig.simSet.id;
                 result.agentCount = simConfig.orgConfig.agentCount;
                 result.configuratorName = simConfig.orgConfig.configuratorParams.configuratorName;
                 result.configuratorParams = simConfig.orgConfig.configuratorParams;
-                result.orgConfigType = simConfig.orgConfig.type;
+                result.orgConfigType = simConfig.orgConfig.configuratorParams.modelName;
                 simConfig.results.push(result);
                 result.priorityIntensity = Utils.modulo(resultDto.priorityTensor);
-                result.performance = this.modelService.calculatePerformance(simConfig, result);
+                result.performance = this.modelService.calculatePerformance(result.simConfig.toDTO(), result.toDTO());
                 // update the simConfig statistics
                 if (this._dev) this._logger.log("Updating simConfig statistics");
-                const resultSet = new ResultSet(simConfig.results);
+                const resultSet = new ResultSet(simConfig.results.map((result) => result.toDTO()));
                 const summaryStatistics = resultSet.getSummary();
                 simConfig.avgPerformance = summaryStatistics.avgPerformance;
                 const currentStdDev = simConfig.stdDevPerformance;
@@ -99,23 +104,33 @@ export class ResultService {
                         });
                 }
                 if (this._dev) this._logger.log("Result " + result.id + " successfully created");
-                return result;
+                return result.toDTO();
             });
     }
 
     async findAll(paginator: Paginator): Promise<Paginated<ResultDTO>> {
         const repository: Repository<Result> = this.dataSource.getRepository(Result);
-        return paginator.run<Result>(repository).then((results) => results as Paginated<ResultDTO>);
+        return paginator.run<Result>(repository).then((results) => {
+            return {
+                ...results,
+                data: results.data.map((result) => result.toDTO())
+            } as Paginated<ResultDTO>;
+        });
     }
 
     async findOne(id: number): Promise<ResultDTO> {
-        return this.dataSource.getRepository(Result).findOneOrFail({
-            where: { id: id },
-            relations: {
-                simConfig: {
-                    orgConfig: true
+        return this.dataSource
+            .getRepository(Result)
+            .findOneOrFail({
+                where: { id: id },
+                relations: {
+                    simConfig: {
+                        orgConfig: true
+                    }
                 }
-            }
-        });
+            })
+            .then((result) => {
+                return result.toDTO();
+            });
     }
 }

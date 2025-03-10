@@ -1,9 +1,9 @@
 import { ApiProperty, PickType } from "@nestjs/swagger";
-import { OrgConfigDTO, ResultDTO, SimSetDTO, StateType } from "aethon-arion-pipeline";
+import { OrgConfigDTO, ResultDTO, SimConfigDTO, SimSetDTO, StateType } from "aethon-arion-pipeline";
 import { Transform } from "class-transformer";
 import { IsDate, IsIn, IsNumber, IsObject, IsOptional } from "class-validator";
 
-export class SimConfigDTOGet {
+export class SimConfigDTOGet implements SimConfigDTO {
     @IsNumber()
     @ApiProperty({
         name: "id",

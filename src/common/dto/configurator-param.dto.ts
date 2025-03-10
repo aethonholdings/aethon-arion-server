@@ -1,5 +1,6 @@
 import { ApiProperty, PickType } from "@nestjs/swagger";
-import { IsNumber, IsObject, IsString } from 'class-validator';
+import { ConfiguratorParamData } from "aethon-arion-pipeline";
+import { IsNumber, IsObject, IsString } from "class-validator";
 
 export class ConfiguratorParamsDTOGet {
     @IsNumber()
@@ -45,7 +46,7 @@ export class ConfiguratorParamsDTOGet {
             actionStateProbability: 0.85
         }
     })
-    data: any;
+    data: ConfiguratorParamData;
 
     @IsString()
     @ApiProperty({
@@ -57,4 +58,8 @@ export class ConfiguratorParamsDTOGet {
     hash: string;
 }
 
-export class ConfiguratorParamsDTOCreate extends PickType(ConfiguratorParamsDTOGet, ["modelName", "configuratorName", "data"]) {}
+export class ConfiguratorParamsDTOCreate extends PickType(ConfiguratorParamsDTOGet, [
+    "modelName",
+    "configuratorName",
+    "data"
+]) {}

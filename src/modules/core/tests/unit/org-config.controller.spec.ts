@@ -8,7 +8,7 @@ import { OrgConfigService } from "../../endpoints/org-config/org-config.service"
 import { ModelService } from "../../services/model.service";
 import { OrgConfigDTO } from "aethon-arion-pipeline";
 import { orgConfigControllerCreateTestData } from "../data/org-config.controller.test.data";
-import { OrgConfig } from 'aethon-arion-db';
+import { OrgConfig } from "aethon-arion-db";
 
 describe("Model module: OrgConfigController", () => {
     let controller: OrgConfigController;

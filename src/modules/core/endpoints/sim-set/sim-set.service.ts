@@ -1,7 +1,7 @@
 import environment from "../../../../../env/environment";
 import { SimSet } from "aethon-arion-db";
 import { SimConfigDTO, SimSetDTO } from "aethon-arion-pipeline";
-import { HttpStatus, Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { DataSource } from "typeorm";
 import { SimConfigService } from "../sim-config/sim-config.service";
 import { ResultService } from "../result/result.service";
@@ -24,14 +24,24 @@ export class SimSetService {
     }
 
     findAll(query: any): Promise<SimSetDTO[]> {
-        return this.dataSource.getRepository(SimSet).find(query);
+        return this.dataSource
+            .getRepository(SimSet)
+            .find(query)
+            .then((simSets: SimSet[]) => {
+                return simSets.map((simSet) => simSet.toDTO());
+            });
     }
 
     findOne(id: number): Promise<SimSetDTO> {
-        return this.dataSource.getRepository(SimSet).findOneOrFail({
-            relations: ["simConfigs"],
-            where: { id: id }
-        });
+        return this.dataSource
+            .getRepository(SimSet)
+            .findOneOrFail({
+                relations: ["simConfigs"],
+                where: { id: id }
+            })
+            .then((simSet: SimSet) => {
+                return simSet.toDTO();
+            });
     }
 
     findSimConfigs(id: number, paginator: Paginator): Promise<Paginated<SimConfigDTO>> {
@@ -48,7 +58,15 @@ export class SimSetService {
 
     create(simSet: SimSetDTOCreate): Promise<SimSetDTO> {
         if (this.modelService.getModelNames().includes(simSet.type)) {
-            return this.dataSource.getRepository(SimSet).save(simSet);
+            return this.dataSource
+                .getRepository(SimSet)
+                .save(simSet)
+                .then((savedSimSet: SimSet) => {
+                    return {
+                        ...savedSimSet,
+                        simConfigs: [] as SimConfigDTO[]
+                    } as SimSetDTO;
+                });
         } else {
             throw new Error("Invalid model type");
         }

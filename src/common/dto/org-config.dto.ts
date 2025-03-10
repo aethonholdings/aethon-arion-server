@@ -2,6 +2,7 @@ import { ApiProperty } from "@nestjs/swagger";
 import {
     AgentSetTensorsDTO,
     BoardDTO,
+    ConfiguratorParamData,
     ConfiguratorParamsDTO,
     OrgConfigDTO,
     PlantDTO,
@@ -168,7 +169,7 @@ export class OrgConfigDTOGet implements OrgConfigDTO {
             actionStateProbability: 0.85
         }
     })
-    configuratorParams: ConfiguratorParamsDTO;
+    configuratorParams: ConfiguratorParamsDTO<ConfiguratorParamData>;
 
     @IsObject()
     @IsOptional()
