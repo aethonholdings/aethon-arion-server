@@ -11,7 +11,7 @@ export function environment(): { database: TypeOrmModuleOptions } {
             database: "arion",
             synchronize: true,
             logging: false,
-            entities: ["src/../node_modules/aethon-arion-db/**/*.entity{.ts,.js}"]
+            entities: ["src/../node_modules/aethon-arion-db/dist/entities/**/*.entity{.js,.ts}"]
         }
     };
 }
