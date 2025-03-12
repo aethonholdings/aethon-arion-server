@@ -16,7 +16,7 @@ export class ModelService {
     constructor() {
         const env: ServerEnvironment = environment();
         this._models = env.options.models;
-        this._modelNames = this._models.map((model) => model.getName());
+        this._modelNames = this._models.map((model) => model.name);
         this._dev = env.root.dev;
     }
 
@@ -25,7 +25,7 @@ export class ModelService {
     }
 
     getModel(modelName: string): Model {
-        return this._models.find((model) => model.getName() === modelName);
+        return this._models.find((model) => model.name === modelName);
     }
 
     calculatePerformance(simConfig: SimConfigDTO, result: ResultDTO): number {

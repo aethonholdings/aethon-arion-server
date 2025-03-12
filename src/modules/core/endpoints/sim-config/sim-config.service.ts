@@ -60,7 +60,7 @@ export class SimConfigService {
         return this.dataSource
             .getRepository(SimConfig)
             .findOne({
-                relations: ["orgConfig", "simSet"],
+                relations: ["orgConfig", "simSet", "simConfigParams"],
                 where: { id: id }
             })
             .then((simConfig) => {
@@ -86,7 +86,8 @@ export class SimConfigService {
             relations: {
                 simConfig: {
                     orgConfig: true,
-                    simSet: true
+                    simSet: true,
+                    simConfigParams: true
                 }
             },
             where: { simConfigId: id }
@@ -95,6 +96,7 @@ export class SimConfigService {
         });
     }
 
+    // THIS BIT WILL CRASH
     create(simConfigDTO: SimConfigDTOCreate): Promise<SimConfigDTO> {
         const queries = Promise.all([
             this.dataSource.getRepository(SimSet).findOneOrFail({ where: { id: simConfigDTO.simSetId } }),

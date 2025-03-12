@@ -1,5 +1,5 @@
 import environment from "../../../../../env/environment";
-import { SimSet } from "aethon-arion-db";
+import { SimConfig, SimSet } from "aethon-arion-db";
 import { SimConfigDTO, SimSetDTO } from "aethon-arion-pipeline";
 import { Injectable, Logger } from "@nestjs/common";
 import { DataSource } from "typeorm";
@@ -26,7 +26,14 @@ export class SimSetService {
     findAll(query: any): Promise<SimSetDTO[]> {
         return this.dataSource
             .getRepository(SimSet)
-            .find(query)
+            .find({
+                ...query,
+                relations: {
+                    simConfigs: {
+                        simConfigParams: true
+                    }
+                }
+            })
             .then((simSets: SimSet[]) => {
                 return simSets.map((simSet) => simSet.toDTO());
             });
@@ -36,12 +43,14 @@ export class SimSetService {
         return this.dataSource
             .getRepository(SimSet)
             .findOneOrFail({
-                relations: ["simConfigs"],
+                relations: {
+                    simConfigs: {
+                        simConfigParams: true
+                    }
+                },
                 where: { id: id }
             })
-            .then((simSet: SimSet) => {
-                return simSet.toDTO();
-            });
+            .then((simSet: SimSet) => simSet.toDTO());
     }
 
     findSimConfigs(id: number, paginator: Paginator): Promise<Paginated<SimConfigDTO>> {
