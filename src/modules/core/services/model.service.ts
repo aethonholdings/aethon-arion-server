@@ -1,9 +1,5 @@
 import environment from "../../../../env/environment";
-import {
-    Model,
-    ResultDTO,
-    SimConfigDTO
-} from "aethon-arion-pipeline";
+import { Model, ResultDTO, SimConfigDTO } from "aethon-arion-pipeline";
 import { Injectable, Logger } from "@nestjs/common";
 import { ServerEnvironment } from "src/common/types/server.types";
 

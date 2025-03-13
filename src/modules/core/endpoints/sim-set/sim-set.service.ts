@@ -1,5 +1,5 @@
 import environment from "../../../../../env/environment";
-import { SimConfig, SimSet } from "aethon-arion-db";
+import { SimSet } from "aethon-arion-db";
 import { SimConfigDTO, SimSetDTO } from "aethon-arion-pipeline";
 import { Injectable, Logger } from "@nestjs/common";
 import { DataSource } from "typeorm";

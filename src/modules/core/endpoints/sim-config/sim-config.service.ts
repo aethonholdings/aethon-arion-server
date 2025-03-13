@@ -71,7 +71,7 @@ export class SimConfigService {
     findAll(paginator: Paginator): Promise<Paginated<SimConfigDTO>> {
         const source: Repository<SimConfig> = this.dataSource.getRepository(SimConfig);
         return paginator.run<SimConfig>(source).then((paginated: Paginated<SimConfig>) => {
-            let tmp: Paginated<SimConfigDTO> = {
+            const tmp: Paginated<SimConfigDTO> = {
                 ...paginated,
                 data: paginated.data.map((simConfig) => {
                     return simConfig.toDTO();
@@ -82,18 +82,21 @@ export class SimConfigService {
     }
 
     findResults(id: number): Promise<ResultDTO[]> {
-        return this.dataSource.getRepository(Result).find({
-            relations: {
-                simConfig: {
-                    orgConfig: true,
-                    simSet: true,
-                    simConfigParams: true
-                }
-            },
-            where: { simConfigId: id }
-        }).then((results: Result[]) => {
-            return results.map((result) => result.toDTO());
-        });
+        return this.dataSource
+            .getRepository(Result)
+            .find({
+                relations: {
+                    simConfig: {
+                        orgConfig: true,
+                        simSet: true,
+                        simConfigParams: true
+                    }
+                },
+                where: { simConfigId: id }
+            })
+            .then((results: Result[]) => {
+                return results.map((result) => result.toDTO());
+            });
     }
 
     // THIS BIT WILL CRASH
