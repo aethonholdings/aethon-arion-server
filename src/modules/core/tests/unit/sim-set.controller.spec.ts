@@ -41,7 +41,7 @@ describe("Model module: SimSetController", () => {
         const create = await controller.create(simSetControllerTestData.basic);
         expect(create).toBeDefined();
         const view = await controller.view(create.id);
-        expect(view.type).toStrictEqual(simSetControllerTestData.basic.type);
+        expect(view.modelName).toStrictEqual(simSetControllerTestData.basic.modelName);
         expect(view.description).toStrictEqual(simSetControllerTestData.basic.description);
         const deleted = await controller.delete(create.id);
         expect(deleted).toBeDefined();

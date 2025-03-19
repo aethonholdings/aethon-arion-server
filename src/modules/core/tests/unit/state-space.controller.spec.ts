@@ -4,9 +4,9 @@ import { StateSpaceController } from "../../endpoints/state-space/state-space.co
 import { DataSource } from "typeorm";
 import { ModuleMetadata } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
-import { StateSpacePoint } from "aethon-arion-pipeline";
 import { StateSpaceService } from "../../endpoints/state-space/state-space.service";
 import { ModelService } from "../../services/model.service";
+import { StateSpacePoint } from "aethon-arion-db";
 
 describe("Model module: StateSpaceController", () => {
     let controller: StateSpaceController;

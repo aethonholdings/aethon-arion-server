@@ -1,3 +1,5 @@
+import { ModelParamsDTO } from "aethon-arion-pipeline";
+
 export const simSetControllerTestData = {
-    basic: { type: "C1", description: "Basic test" }
+    basic: { modelName: "C1", description: "Basic test", modelParams: {} as ModelParamsDTO }
 };
