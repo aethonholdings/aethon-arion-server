@@ -1,6 +1,6 @@
-import { IsNotEmpty, IsObject, IsOptional, IsString } from "class-validator";
+import { IsIn, IsNotEmpty, IsObject, IsOptional, IsString } from "class-validator";
 import { ApiProperty, PickType } from "@nestjs/swagger";
-import { ModelParamsDTO, SimSetDTO } from "aethon-arion-pipeline";
+import { ModelParamsDTO, SimSetDTO, StateType } from "aethon-arion-pipeline";
 
 export class SimSetDTOGet implements SimSetDTO {
     @IsString()
@@ -32,6 +32,15 @@ export class SimSetDTOGet implements SimSetDTO {
         example: "C1"
     })
     modelName: string;
+
+    @IsIn(["running", "pending", "completed", "failed"])
+    @ApiProperty({
+        name: "state",
+        type: String,
+        description: "The state of the simulation set",
+        example: "running"
+    })
+    state: StateType;
 
     @IsObject()
     @IsOptional()

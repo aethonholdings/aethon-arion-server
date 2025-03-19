@@ -50,13 +50,12 @@ export class SimSetService {
     create(simSet: SimSetDTOCreate): Promise<SimSetDTO> {
         const model = this.modelService.getModel(simSet.modelName);
         if (model) {
-            if (!simSet.modelParams) simSet.modelParams = model.getParameters();
+            const tmp: SimSetDTO = { ...simSet } as SimSetDTO;
+            if (!tmp.modelParams) simSet.modelParams = model.getParameters();
+            tmp.state = "pending";
             return this.dataSource
                 .getRepository(SimSet)
-                .save(simSet)
-                .then((savedSimSet: SimSet) => {
-                    return savedSimSet as SimSetDTO;
-                });
+                .save(tmp)
         } else {
             throw new Error("Invalid model name");
         }
