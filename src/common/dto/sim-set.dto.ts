@@ -33,6 +33,16 @@ export class SimSetDTOGet implements SimSetDTO {
     })
     modelName: string;
 
+    @IsString()
+    @IsNotEmpty()
+    @ApiProperty({
+        name: "optimiserName",
+        type: String,
+        description: "The name of the optimiser used for the simulation set",
+        example: "Gradient Ascent"
+    })
+    optimiserName: string;
+
     @IsIn(["running", "pending", "completed", "failed"])
     @ApiProperty({
         name: "state",
@@ -49,18 +59,26 @@ export class SimSetDTOGet implements SimSetDTO {
         type: Object,
         description: "Model parameters for the simulation set",
         example: {
-            "param1": "value1",
-            "param2": "value2"
+            param1: "value1",
+            param2: "value2"
         },
         required: false
     })
     modelParams: ModelParamsDTO;
 }
 
-export class SimSetDTOCreate extends PickType(SimSetDTOGet, ["description", "modelName", "modelParams"]) {
+export class SimSetDTOCreate extends PickType(SimSetDTOGet, [
+    "description",
+    "modelName",
+    "modelParams",
+    "optimiserName"
+]) {
+    @IsOptional()
+    description: string;
+
     @IsOptional()
     modelParams: ModelParamsDTO;
 
     @IsOptional()
-    description: string;
+    optimiserName: string;
 }

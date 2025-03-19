@@ -3,7 +3,6 @@ import { SimSet } from "aethon-arion-db";
 import { SimSetDTO } from "aethon-arion-pipeline";
 import { Injectable, Logger } from "@nestjs/common";
 import { DataSource } from "typeorm";
-import { SimConfigService } from "../sim-config/sim-config.service";
 import { ResultService } from "../result/result.service";
 import { ModelService } from "../../services/model.service";
 import { SimSetDTOCreate } from "../../../../common/dto/sim-set.dto";
@@ -16,7 +15,6 @@ export class SimSetService {
 
     constructor(
         private dataSource: DataSource,
-        private simConfigService: SimConfigService,
         private resultService: ResultService,
         private modelService: ModelService
     ) {
@@ -47,15 +45,19 @@ export class SimSetService {
         return this.resultService.findAll(paginator);
     }
 
-    create(simSet: SimSetDTOCreate): Promise<SimSetDTO> {
-        const model = this.modelService.getModel(simSet.modelName);
+    async create(simSetDTO: SimSetDTOCreate): Promise<SimSetDTO> {
+        const model = this.modelService.getModel(simSetDTO.modelName);
         if (model) {
-            const tmp: SimSetDTO = { ...simSet } as SimSetDTO;
-            if (!tmp.modelParams) simSet.modelParams = model.getParameters();
-            tmp.state = "pending";
-            return this.dataSource
-                .getRepository(SimSet)
-                .save(tmp)
+            // Create a new SimSet record
+            const simSet: SimSet = await this.dataSource.getRepository(SimSet).save({
+                ...simSetDTO,
+                modelParams: simSetDTO.modelParams ? simSetDTO.modelParams : model.getParameters(),
+                optimiserName: simSetDTO.optimiserName ? simSetDTO.optimiserName : model.getDefaultOptimiser().name,
+                state: "pending"
+            });
+
+            // initialise the optimiser
+            return simSet;
         } else {
             throw new Error("Invalid model name");
         }
