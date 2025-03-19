@@ -54,7 +54,7 @@ export class ModelService {
     deleteRecord(id: number, logger: Logger, repository: any): Promise<number> {
         return repository.delete({ id: id }).then((result) => {
             if (result.affected) return id;
-            else throw new Error(`No record found on repository ${repository.name} with id ${id} to delete`);
+            else throw new Error(`No record found on repository ${repository} with id ${id} to delete`);
         });
     }
 }

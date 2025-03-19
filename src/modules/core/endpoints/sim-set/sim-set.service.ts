@@ -1,6 +1,6 @@
 import environment from "../../../../../env/environment";
-import { SimSet } from "aethon-arion-db";
-import { SimSetDTO } from "aethon-arion-pipeline";
+import { OptimiserState, SimSet } from "aethon-arion-db";
+import { SimSetDTO, States } from "aethon-arion-pipeline";
 import { Injectable, Logger } from "@nestjs/common";
 import { DataSource } from "typeorm";
 import { ResultService } from "../result/result.service";
@@ -34,7 +34,8 @@ export class SimSetService {
         return this.dataSource
             .getRepository(SimSet)
             .findOneOrFail({
-                where: { id: id }
+                where: { id: id },
+                relations: { optimiserStates: true }
             })
             .then((simSet: SimSet) => simSet.toDTO());
     }
@@ -48,16 +49,33 @@ export class SimSetService {
     async create(simSetDTO: SimSetDTOCreate): Promise<SimSetDTO> {
         const model = this.modelService.getModel(simSetDTO.modelName);
         if (model) {
-            // Create a new SimSet record
+            // this is a long-winded commit to the database, but a more efficient approach fails on TypeORM
+            // keepign this as is until improved using the query builder
+
+            // Create the SimSet with an empty optimiserStates array
             const simSet: SimSet = await this.dataSource.getRepository(SimSet).save({
                 ...simSetDTO,
-                modelParams: simSetDTO.modelParams ? simSetDTO.modelParams : model.getParameters(),
-                optimiserName: simSetDTO.optimiserName ? simSetDTO.optimiserName : model.getDefaultOptimiser().name,
-                state: "pending"
+                modelParams: model.getParameters(),
+                optimiserName: model.getDefaultOptimiser().name,
+                state: States.PENDING,
+                optimiserStates: []
             });
 
-            // initialise the optimiser
-            return simSet;
+            // Create the OptimiserState and attach it to the SimSet
+            const optimiserState: OptimiserState = await this.dataSource.getRepository(OptimiserState).save({
+                ...model.getDefaultOptimiser().step(),
+                stepCount: 0,
+                simSet: simSet,
+                start: new Date(),
+                status: States.PENDING,
+                percentComplete: 0,
+                modelName: model.name,
+                optimiserName: model.getDefaultOptimiser().name,
+                converged: false
+            });
+
+            // Return the new SimSet
+            return this.findOne(simSet.id);
         } else {
             throw new Error("Invalid model name");
         }
