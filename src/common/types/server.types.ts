@@ -1,4 +1,4 @@
-import { Model } from "aethon-arion-pipeline";
+import { ConfiguratorParamData, Model, OptimiserData, OptimiserParameters } from "aethon-arion-pipeline";
 
 export type KeyBuilder = any[];
 
@@ -34,5 +34,5 @@ export type ArionOptions = {
     minRuns: number;
     randomStreamType: "static" | "random";
     simulationDays: number;
-    models: Model<any, any>[];
+    models: Model<ConfiguratorParamData, OptimiserParameters, OptimiserData>[];
 };
