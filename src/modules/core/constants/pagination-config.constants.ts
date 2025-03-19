@@ -4,7 +4,7 @@ export const simConfigPaginationConfig: PaginateConfig = {
     limit: 100,
     limitMax: 100,
     orderBy: [["avgPerformance", "DESC"]],
-    relations: ["simSet", "orgConfig", "simConfigParams"]
+    relations: ["orgConfig"]
 };
 
 export const resultPaginationConfig: PaginateConfig = {

@@ -1,13 +1,13 @@
 import environment from "../../../../../env/environment";
 import { SimSet } from "aethon-arion-db";
-import { SimConfigDTO, SimSetDTO } from "aethon-arion-pipeline";
+import { SimSetDTO } from "aethon-arion-pipeline";
 import { Injectable, Logger } from "@nestjs/common";
 import { DataSource } from "typeorm";
 import { SimConfigService } from "../sim-config/sim-config.service";
 import { ResultService } from "../result/result.service";
 import { ModelService } from "../../services/model.service";
 import { SimSetDTOCreate } from "../../../../common/dto/sim-set.dto";
-import { Comparator, Paginated, Paginator } from "aethon-nestjs-paginate";
+import { Comparator, Paginator } from "aethon-nestjs-paginate";
 
 @Injectable()
 export class SimSetService {
@@ -26,14 +26,7 @@ export class SimSetService {
     findAll(query: any): Promise<SimSetDTO[]> {
         return this.dataSource
             .getRepository(SimSet)
-            .find({
-                ...query,
-                relations: {
-                    simConfigs: {
-                        simConfigParams: true
-                    }
-                }
-            })
+            .find(query)
             .then((simSets: SimSet[]) => {
                 return simSets.map((simSet) => simSet.toDTO());
             });
@@ -43,20 +36,9 @@ export class SimSetService {
         return this.dataSource
             .getRepository(SimSet)
             .findOneOrFail({
-                relations: {
-                    simConfigs: {
-                        simConfigParams: true
-                    }
-                },
                 where: { id: id }
             })
             .then((simSet: SimSet) => simSet.toDTO());
-    }
-
-    findSimConfigs(id: number, paginator: Paginator): Promise<Paginated<SimConfigDTO>> {
-        if (this._dev) this._logger.log("Fetching SimSet config data");
-        paginator.query.where = [["simSetId", Comparator.EQUAL, id.toString()]];
-        return this.simConfigService.findAll(paginator);
     }
 
     findResults(simSetId: number, paginator: Paginator): Promise<any> {
@@ -66,18 +48,17 @@ export class SimSetService {
     }
 
     create(simSet: SimSetDTOCreate): Promise<SimSetDTO> {
-        if (this.modelService.getModelNames().includes(simSet.type)) {
+        const model = this.modelService.getModel(simSet.modelName);
+        if (model) {
+            if (!simSet.modelParams) simSet.modelParams = model.getParameters();
             return this.dataSource
                 .getRepository(SimSet)
                 .save(simSet)
                 .then((savedSimSet: SimSet) => {
-                    return {
-                        ...savedSimSet,
-                        simConfigs: [] as SimConfigDTO[]
-                    } as SimSetDTO;
+                    return savedSimSet as SimSetDTO;
                 });
         } else {
-            throw new Error("Invalid model type");
+            throw new Error("Invalid model name");
         }
     }
 

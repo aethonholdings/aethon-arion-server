@@ -31,7 +31,6 @@ export class ResultService {
                 where: { id: resultDto.simConfigId },
                 relations: {
                     orgConfig: { configuratorParams: true },
-                    simSet: true,
                     results: true,
                     simConfigParams: true
                 }
@@ -41,7 +40,6 @@ export class ResultService {
                 if (this._dev) this._logger.log("Creating result object");
                 const result = this.dataSource.getRepository(Result).create(resultDto);
                 result.orgConfigId = simConfig.orgConfig.id;
-                result.simSetId = simConfig.simSet.id;
                 result.agentCount = simConfig.orgConfig.agentCount;
                 result.configuratorName = simConfig.orgConfig.configuratorParams.configuratorName;
                 result.configuratorParams = simConfig.orgConfig.configuratorParams;
@@ -58,7 +56,6 @@ export class ResultService {
                 simConfig.stdDevPerformance = summaryStatistics.stDevPerformance;
                 simConfig.entropy = summaryStatistics.entropy;
                 simConfig.runCount++;
-                simConfig.simSet.completedRunCount++;
                 // check for convergence
                 let converged: boolean = false;
                 if (simConfig.runCount >= 2 && simConfig.runCount >= this._minRuns) {
@@ -73,23 +70,21 @@ export class ResultService {
                 if (converged) {
                     if (this._dev) this._logger.log("Simulation converged");
                     simConfig.state = "completed";
-                    simConfig.simSet.state = "completed";
                     if (!simConfig.converged) {
                         if (this._dev) this._logger.log("Marking as completed");
                         simConfig.end = new Date();
                         simConfig.durationSec = (simConfig.end.getTime() - simConfig.start.getTime()) / 1000;
-                        simConfig.simSet.completedSimConfigCount++;
                         simConfig.converged = true;
                     }
                 }
 
                 // save everything
                 if (this._dev) this._logger.log("Saving result");
-                return Promise.all([simConfig.save(), simConfig.simSet.save(), result.save()]);
+                return Promise.all([simConfig.save(), result.save()]);
             })
             .then((results) => {
                 // save the state space if applicable
-                const result = results[2];
+                const result = results[1];
                 if (this._dev) this._logger.log("Result saved with id: " + result.id);
                 if (this._storeStateSpace && resultDto.stateSpace && resultDto.stateSpace.length > 0) {
                     if (this._dev) this._logger.log("Saving state space asyncronously");

@@ -7,7 +7,7 @@ import { ServerEnvironment } from "src/common/types/server.types";
 export class ModelService {
     private _modelNames: string[];
     private _dev: boolean = false;
-    private _models: Model[] = [];
+    private _models: Model<any, any>[] = [];
 
     constructor() {
         const env: ServerEnvironment = environment();
@@ -20,7 +20,7 @@ export class ModelService {
         return this._modelNames;
     }
 
-    getModel(modelName: string): Model {
+    getModel(modelName: string): Model<any, any> {
         return this._models.find((model) => model.name === modelName);
     }
 

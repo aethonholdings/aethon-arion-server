@@ -1,4 +1,5 @@
 import { C1 } from "aethon-arion-c1";
+import { C1Model } from "aethon-arion-c1/dist/classes/pipeline/c1-model.class";
 import { ServerEnvironment } from "src/common/types/server.types";
 
 export default () =>
@@ -23,6 +24,7 @@ export default () =>
             minRuns: 10,
             randomStreamType: "random",
             simulationDays: 100,
-            models: [C1],
+            // this following casting is an inexplicable issue with Typescript compilation on inheritance with protected variables
+            models: [C1 as C1Model]
         }
     }) as ServerEnvironment;

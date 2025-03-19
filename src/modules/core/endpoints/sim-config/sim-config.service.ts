@@ -32,8 +32,7 @@ export class SimConfigService {
                 relations: {
                     orgConfig: {
                         configuratorParams: true
-                    },
-                    simSet: true
+                    }
                 },
                 where: { converged: false },
                 order: { id: "ASC" }
@@ -43,11 +42,7 @@ export class SimConfigService {
                     if (this._dev) this._logger.log("Next simconfig fetched");
                     if (simConfig.dispatchedRuns === 0) simConfig.start = new Date();
                     simConfig.dispatchedRuns++;
-                    simConfig.simSet.state = "running";
                     simConfig.state = "running";
-                    simConfig.simSet.save().then(() => {
-                        if (this._dev) this._logger.log("SimSet updated");
-                    });
                     return simConfig.save().then((simConfig) => {
                         if (this._dev) this._logger.log("SimConfig updated");
                         return simConfig.toDTO();
@@ -88,7 +83,6 @@ export class SimConfigService {
                 relations: {
                     simConfig: {
                         orgConfig: true,
-                        simSet: true,
                         simConfigParams: true
                     }
                 },
@@ -110,8 +104,7 @@ export class SimConfigService {
 
         return queries
             .then(([simSet, orgConfig]) => {
-                if (simSet && orgConfig && orgConfig.configuratorParams.modelName === simSet.type) {
-                    simSet.simConfigCount++;
+                if (simSet && orgConfig && orgConfig.configuratorParams.modelName === simSet.modelName) {
                     const simConfig = this.dataSource.getRepository(SimConfig).save({
                         simSet: simSet,
                         orgConfig: orgConfig,
@@ -140,10 +133,6 @@ export class SimConfigService {
         // adjust the simset simconfig counter
         return repository
             .findOneOrFail({ where: { id: id } })
-            .then((simConfig) => {
-                simConfig.simSet.simConfigCount--;
-                return simConfig.simSet.save();
-            })
             .then(() => {
                 return this.modelService.deleteRecord(id, this._logger, this.dataSource.getRepository(SimConfig));
             });

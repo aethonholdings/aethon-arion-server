@@ -1,7 +1,7 @@
 import { ApiProperty, PickType } from "@nestjs/swagger";
 import { OrgConfigDTO, ResultDTO, SimConfigDTO, SimSetDTO, StateType } from "aethon-arion-pipeline";
 import { Transform } from "class-transformer";
-import { IsDate, IsIn, IsNumber, IsObject, IsOptional } from "class-validator";
+import { IsDate, IsIn, IsNumber, IsObject, IsOptional, IsString } from "class-validator";
 
 export class SimConfigDTOGet implements SimConfigDTO {
     @IsNumber()
@@ -172,6 +172,14 @@ export class SimConfigDTOGet implements SimConfigDTO {
         description: "The results of the simulation"
     })
     results: ResultDTO[];
+
+    @IsString()
+    @ApiProperty({
+        name: "state",
+        type: "string",
+        description: "The state of the simulation configuration",
+        example: "running"
+    })
     state: StateType;
 }
 

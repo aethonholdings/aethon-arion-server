@@ -18,7 +18,7 @@ export class OrgConfigService {
             .getRepository(OrgConfig)
             .findOneOrFail({
                 where: { id: id },
-                relations: { simConfigs: { simConfigParams: true, simSet: false }, configuratorParams: true }
+                relations: { simConfigs: { simConfigParams: true }, configuratorParams: true }
             })
             .then((orgConfig: OrgConfig) => {
                 return orgConfig.toDTO();
@@ -38,7 +38,7 @@ export class OrgConfigService {
         return new Promise((resolve, reject) => {
             const model = this.modelService.getModel(configuratorParamsDTO.modelName);
             if (!model) return reject(new Error("Invalid model name"));
-            return resolve(model.createOrganisation(configuratorParamsDTO));
+            return resolve(model.getDefaultConfigurator().generate(configuratorParamsDTO));
         })
             .then((orgConfigDTO: OrgConfigDTO) => {
                 // find the configurator param object based on the object hash

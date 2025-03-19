@@ -1,6 +1,6 @@
-import { IsNotEmpty, IsNumber, IsString } from "class-validator";
+import { IsNotEmpty, IsObject, IsOptional, IsString } from "class-validator";
 import { ApiProperty, PickType } from "@nestjs/swagger";
-import { SimConfigDTO, SimSetDTO, StateType } from "aethon-arion-pipeline";
+import { ModelParamsDTO, SimSetDTO } from "aethon-arion-pipeline";
 
 export class SimSetDTOGet implements SimSetDTO {
     @IsString()
@@ -13,68 +13,45 @@ export class SimSetDTOGet implements SimSetDTO {
     id: number;
 
     @IsString()
+    @IsOptional()
     @ApiProperty({
         name: "description",
         type: "string",
         description: "Text description of the simulation set",
-        example: "Here is a test description"
+        example: "Here is a test description",
+        required: false
     })
     description: string;
 
     @IsString()
     @IsNotEmpty()
     @ApiProperty({
-        name: "type",
+        name: "modelName",
         type: String,
         description: "The signature of the organisation model for which the simulation set is run",
         example: "C1"
     })
-    type: string;
+    modelName: string;
 
-    @IsString()
+    @IsObject()
+    @IsOptional()
     @ApiProperty({
-        name: "simConfigs",
-        isArray: true,
+        name: "modelParams",
         type: Object,
-        description: "The simulation configurations for the simulation set"
+        description: "Model parameters for the simulation set",
+        example: {
+            "param1": "value1",
+            "param2": "value2"
+        },
+        required: false
     })
-    simConfigs: SimConfigDTO[];
-
-    @IsString()
-    @ApiProperty({
-        name: "state",
-        type: String,
-        description: "The current state of the simulation set",
-        example: "running"
-    })
-    state: StateType;
-
-    @IsNumber()
-    @ApiProperty({
-        name: "runCount",
-        type: Number,
-        description: "The number of simConfigs in the simulation set",
-        example: 10
-    })
-    simConfigCount: number;
-
-    @IsNumber()
-    @ApiProperty({
-        name: "completedRunCount",
-        type: Number,
-        description: "The number of runs completed in the simulation set",
-        example: 5
-    })
-    completedRunCount: number;
-
-    @IsNumber()
-    @ApiProperty({
-        name: "completedSimConfigCount",
-        type: Number,
-        description: "The number of simulation configurations completed in the simulation set",
-        example: 5
-    })
-    completedSimConfigCount: number;
+    modelParams: ModelParamsDTO;
 }
 
-export class SimSetDTOCreate extends PickType(SimSetDTOGet, ["description", "type"]) {}
+export class SimSetDTOCreate extends PickType(SimSetDTOGet, ["description", "modelName", "modelParams"]) {
+    @IsOptional()
+    modelParams: ModelParamsDTO;
+
+    @IsOptional()
+    description: string;
+}

@@ -3,6 +3,7 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import {
     ConfiguratorParams,
     ConvergenceTest,
+    OptimiserState,
     OrgConfig,
     Result,
     SimConfig,
@@ -22,7 +23,8 @@ import { DatabaseService } from "./services/database.service";
             ConfiguratorParams,
             ConvergenceTest,
             Result,
-            StateSpacePoint
+            StateSpacePoint,
+            OptimiserState
         ])
     ],
     providers: [DatabaseService],

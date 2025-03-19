@@ -9,13 +9,25 @@ import {
     Result,
     StateSpacePoint,
     ConfiguratorParams,
-    SimConfigParams
+    SimConfigParams,
+    ConvergenceTest,
+    OptimiserState
 } from "aethon-arion-db";
 
 @Injectable()
 export class DatabaseService {
     private _dbConfig = env().database;
-    entities: any[] = [SimSet, OrgConfig, SimConfig, Result, StateSpacePoint, ConfiguratorParams, SimConfigParams];
+    entities: any[] = [
+        SimSet,
+        OrgConfig,
+        SimConfig,
+        Result,
+        StateSpacePoint,
+        ConfiguratorParams,
+        SimConfigParams,
+        ConvergenceTest,
+        OptimiserState
+    ];
     constructor(private dataSource: DataSource) {}
 
     async onApplicationBootstrap() {
