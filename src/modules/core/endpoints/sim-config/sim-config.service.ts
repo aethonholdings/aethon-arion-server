@@ -1,7 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { DataSource, Repository } from "typeorm";
 import { OrgConfig, Result, SimConfig, SimSet } from "aethon-arion-db";
-import { ResultDTO, SimConfigDTO } from "aethon-arion-pipeline";
+import { ResultDTO, SimConfigDTO, States } from "aethon-arion-pipeline";
 import { ModelService } from "../../services/model.service";
 import { SimConfigDTOCreate } from "../../../../common/dto/sim-config.dto";
 import environment from "../../../../../env/environment";
@@ -116,7 +116,8 @@ export class SimConfigService {
                         days: simConfigDTO?.days ? simConfigDTO.days : this._simulationDays,
                         converged: false,
                         running: false,
-                        state: "pending"
+                        saveStateSpace: false,
+                        state: States.PENDING
                     });
                     return Promise.all([simConfig, simSet.save()]);
                 } else {
@@ -124,7 +125,7 @@ export class SimConfigService {
                 }
             })
             .then((results) => {
-                return results[0].toDTO();
+                return results[0];
             });
     }
 
