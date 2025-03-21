@@ -50,7 +50,7 @@ export class ResultService {
                 console.log(`----------- ${result.performance} -----------`);
                 // <- open -> this could be done with an SQL query tbh
                 if (this._dev) this._logger.log("Updating simConfig statistics");
-                const resultSet = new ResultSet(simConfig.results.map((result) => result));
+                const resultSet = new ResultSet(simConfig.results);
                 const summaryStatistics = resultSet.getSummary();
                 simConfig.avgPerformance = summaryStatistics.avgPerformance;
                 const currentStdDev = simConfig.stdDevPerformance;
@@ -101,7 +101,7 @@ export class ResultService {
                         });
                 }
                 if (this._dev) this._logger.log("Result " + result.id + " successfully created");
-                return result.toDTO();
+                return result;
             });
     }
 

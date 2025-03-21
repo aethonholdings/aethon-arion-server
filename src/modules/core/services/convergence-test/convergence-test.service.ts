@@ -29,24 +29,27 @@ export class ConvergenceTestService {
         configuratorParamsDTO: ConfiguratorParamsDTO<ConfiguratorParamData>
     ): Promise<ConvergenceTest> {
         // create a new convergence test
-        return this.dataSource.getRepository(ConvergenceTest).save({
-            simConfigParams: simConfigParamsDTO,
-            configuratorParams: configuratorParamsDTO,
-            orgConfigCount: 0,
-            simConfigCount: 0,
-            completedSimConfigCount: 0,
-            resultCount: 0,
-            dispatchedRuns: 0,
-            avgPerformance: null,
-            stdDevPerformance: null,
-            processingTimeSec: null,
-            state: States.PENDING
-        }).then(async (convergenceTestDTO) => {
-            // generate a sim config based on the convergence test
-            // return the convergence test
-            await this.generateSimConfig(convergenceTestDTO)
-            return convergenceTestDTO;
-        });
+        return this.dataSource
+            .getRepository(ConvergenceTest)
+            .save({
+                simConfigParams: simConfigParamsDTO,
+                configuratorParams: configuratorParamsDTO,
+                orgConfigCount: 0,
+                simConfigCount: 0,
+                completedSimConfigCount: 0,
+                resultCount: 0,
+                dispatchedRuns: 0,
+                avgPerformance: null,
+                stdDevPerformance: null,
+                processingTimeSec: null,
+                state: States.PENDING
+            })
+            .then(async (convergenceTestDTO) => {
+                // generate a sim config based on the convergence test
+                // return the convergence test
+                await this.generateSimConfig(convergenceTestDTO);
+                return convergenceTestDTO;
+            });
     }
 
     async generateSimConfig(convergenceTestDTO: ConvergenceTestDTO): Promise<SimConfigDTO> {
@@ -55,6 +58,11 @@ export class ConvergenceTestService {
             convergenceTestDTO.configuratorParams.modelName
         );
         const orgConfigDTO = await this.orgConfigService.create(convergenceTestDTO.configuratorParams);
-        return this.simConfigService.create(orgConfigDTO, convergenceTestDTO.simConfigParams);
+        return this.simConfigService.create(
+            orgConfigDTO.id,
+            convergenceTestDTO.id,
+            convergenceTestDTO.simConfigParams.randomStreamType,
+            convergenceTestDTO.simConfigParams.days
+        );
     }
 }

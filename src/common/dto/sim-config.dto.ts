@@ -1,5 +1,5 @@
 import { ApiProperty, PickType } from "@nestjs/swagger";
-import { OrgConfigDTO, ResultDTO, SimConfigDTO, SimSetDTO, StateType } from "aethon-arion-pipeline";
+import { ConvergenceTestDTO, OrgConfigDTO, ResultDTO, SimConfigDTO, SimSetDTO, StateType } from "aethon-arion-pipeline";
 import { Transform } from "class-transformer";
 import { IsDate, IsIn, IsNumber, IsObject, IsOptional, IsString } from "class-validator";
 
@@ -71,6 +71,37 @@ export class SimConfigDTOGet implements SimConfigDTO {
         example: 1
     })
     orgConfigId: number;
+
+    @IsObject()
+    @IsOptional()
+    @ApiProperty({
+        name: "convergenceTest",
+        type: Object,
+        description: "The convergence test for this simulation configuration",
+        example: {
+            id: 1,
+            orgConfigCount: 10,
+            simConfigCount: 10,
+            completedSimConfigCount: 5,
+            resultCount: 5,
+            dispatchedRuns: 5,
+            avgPerformance: 9450.81,
+            stdDevPerformance: 0.81,
+            processingTimeSec: 100,
+            state: "running"
+        },
+        required: false
+    })
+    convergenceTest: ConvergenceTestDTO;
+
+    @IsNumber()
+    @ApiProperty({
+        name: "convergenceTestId",
+        type: Number,
+        description: "The unique identifier of the convergence test for the simulation configuration",
+        example: 1
+    })
+    convergenceTestId: number;
 
     @IsNumber()
     @ApiProperty({
@@ -187,5 +218,6 @@ export class SimConfigDTOCreate extends PickType(SimConfigDTOGet, [
     "simSetId",
     "orgConfigId",
     "days",
-    "randomStreamType"
+    "randomStreamType",
+    "convergenceTestId"
 ]) {}

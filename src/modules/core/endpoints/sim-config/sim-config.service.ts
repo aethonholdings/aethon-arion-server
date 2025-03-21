@@ -1,9 +1,8 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { DataSource, Repository } from "typeorm";
-import { OrgConfig, Result, SimConfig, SimConfigParams, SimSet } from "aethon-arion-db";
-import { OrgConfigDTO, ResultDTO, SimConfigDTO, SimConfigParamsDTO, SimSetDTO, States } from "aethon-arion-pipeline";
+import { ConvergenceTest, OrgConfig, Result, SimConfig, SimConfigParams } from "aethon-arion-db";
+import { ConvergenceTestDTO, OrgConfigDTO, RandomStreamType, ResultDTO, SimConfigDTO, States } from "aethon-arion-pipeline";
 import { ModelService } from "../../services/model/model.service";
-import { SimConfigDTOCreate } from "../../../../common/dto/sim-config.dto";
 import environment from "../../../../../env/environment";
 import { Paginated, Paginator } from "aethon-nestjs-paginate";
 
@@ -93,48 +92,35 @@ export class SimConfigService {
             });
     }
 
-    // THIS BIT WILL CRASH
-    create(orgConfigDTO: OrgConfigDTO, simConfigParmsDTO: SimConfigParamsDTO): Promise<SimConfigDTO> {
-        const queries = Promise.all([
-            this.dataSource.getRepository(SimConfigParams).findOneOrFail({ where: { id: simConfigParmsDTO.id } }),
-            this.dataSource
-                .getRepository(OrgConfig)
-                .findOneOrFail({ where: { id: orgConfigDTO.id }, relations: { configuratorParams: true } })
-        ]);
-
-        return queries
-            .then(([simConfigParams, orgConfig]) => {
-                if (simConfigParams && orgConfig) {
-                    return this.dataSource.getRepository(SimConfig).save({
-                        orgConfig: orgConfig,
-                        runCount: 0,
-                        dispatchedRuns: 0,
-                        randomStreamType: simConfigParams.randomStreamType
-                            ? simConfigParams.randomStreamType
-                            : this._randomStreamType,
-                        days: simConfigParams.days ? simConfigParams.days : this._simulationDays,
-                        converged: false,
-                        running: false,
-                        saveStateSpace: false,
-                        state: States.PENDING,
-                        simConfigParams: simConfigParams,
-                    });
-                } else {
-                    throw new Error("Incompatible model signature with SimSet");
-                }
-            })
-            .then((results) => {
-                return results[0];
+    async create(orgConfigId: number, convergenceTestId: number, randomStreamType?: RandomStreamType, days?: number): Promise<SimConfigDTO> {
+        const convergenceTest = await this.dataSource.getRepository(ConvergenceTest).findOneOrFail({ where: { id: convergenceTestId }, relations: ["simConfigParams"] });
+        const simConfigParamsId = convergenceTest.simConfigParams.id;
+        if (orgConfigId && convergenceTestId) {
+            return this.dataSource.getRepository(SimConfig).save({
+                orgConfigId: orgConfigId,
+                runCount: 0,
+                dispatchedRuns: 0,
+                randomStreamType: randomStreamType
+                    ? randomStreamType
+                    : this._randomStreamType,
+                days: days ? days : this._simulationDays,
+                converged: false,
+                running: false,
+                saveStateSpace: false,
+                state: States.PENDING,
+                simConfigParamsId: simConfigParamsId,
+                convergenceTestId: convergenceTestId
             });
+        } else {
+            throw new Error("Incompatible model signature with SimSet");
+        }
     }
 
     delete(id: number): Promise<number> {
         const repository = this.dataSource.getRepository(SimConfig);
         // adjust the simset simconfig counter
-        return repository
-            .findOneOrFail({ where: { id: id } })
-            .then(() => {
-                return this.modelService.deleteRecord(id, this._logger, this.dataSource.getRepository(SimConfig));
-            });
+        return repository.findOneOrFail({ where: { id: id } }).then(() => {
+            return this.modelService.deleteRecord(id, this._logger, this.dataSource.getRepository(SimConfig));
+        });
     }
 }

@@ -1,5 +1,5 @@
 import { ConfiguratorParams, OrgConfig } from "aethon-arion-db";
-import { ConfiguratorParamData, ConfiguratorParamsDTO, ObjectHash, OrgConfigDTO } from "aethon-arion-pipeline";
+import { ConfiguratorParamData, ConfiguratorParamsDTO, OrgConfigDTO } from "aethon-arion-pipeline";
 import { Injectable, Logger } from "@nestjs/common";
 import { DataSource } from "typeorm";
 import { ModelService } from "../../services/model/model.service";
