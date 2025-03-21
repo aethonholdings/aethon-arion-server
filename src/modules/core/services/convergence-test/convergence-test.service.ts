@@ -7,6 +7,7 @@ import {
     Model,
     OptimiserData,
     OptimiserParameters,
+    OrgConfigDTO,
     SimConfigParamsDTO,
     States
 } from "aethon-arion-pipeline";
@@ -57,12 +58,20 @@ export class ConvergenceTestService {
         const model: Model<ConfiguratorParamData, OptimiserParameters, OptimiserData> = this.modelService.getModel(
             convergenceTestDTO.configuratorParams.modelName
         );
-        const orgConfigDTO = await this.orgConfigService.create(convergenceTestDTO.configuratorParams);
+        const orgConfigDTO = await this.generateOrgConfig(convergenceTestDTO);
         return this.simConfigService.create(
             orgConfigDTO.id,
             convergenceTestDTO.id,
             convergenceTestDTO.simConfigParams.randomStreamType,
             convergenceTestDTO.simConfigParams.days
         );
+    }
+
+    async generateOrgConfig(convergenceTestDTO: ConvergenceTestDTO): Promise<OrgConfigDTO> {
+        // generate an org config based on the convergence test
+        const model: Model<ConfiguratorParamData, OptimiserParameters, OptimiserData> = this.modelService.getModel(
+            convergenceTestDTO.configuratorParams.modelName
+        );
+        return this.orgConfigService.create(convergenceTestDTO.configuratorParams);
     }
 }
