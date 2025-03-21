@@ -3,7 +3,6 @@ import { SimConfigController } from "./endpoints/sim-config/sim-config.controlle
 import { ResultController } from "./endpoints/result/result.controller";
 import { SimConfigService } from "./endpoints/sim-config/sim-config.service";
 import { ResultService } from "./endpoints/result/result.service";
-import { ModelService } from "./services/model.service";
 import { OrgConfigController } from "./endpoints/org-config/org-config.controller";
 import { OrgConfigService } from "./endpoints/org-config/org-config.service";
 import { SimSetController } from "./endpoints/sim-set/sim-set.controller";
@@ -12,9 +11,12 @@ import { StateSpaceController } from "./endpoints/state-space/state-space.contro
 import { StateSpaceService } from "./endpoints/state-space/state-space.service";
 import { SeedsController } from "./endpoints/seeds/seeds.controller";
 import { SeedsService } from "./endpoints/seeds/seeds.service";
+import { ModelService } from "./services/model/model.service";
+import { OptimiserService } from "./services/optimiser/optimiser.service";
+import { ConfiguratorParamsService } from "./services/configurator-params/configurator-params.service";
+import { ConvergenceTestService } from "./services/convergence-test/convergence-test.service";
 
 @Module({
-    imports: [],
     controllers: [
         SimConfigController,
         ResultController,
@@ -23,14 +25,11 @@ import { SeedsService } from "./endpoints/seeds/seeds.service";
         StateSpaceController,
         SeedsController
     ],
-    providers: [
+    providers: [SimConfigService, ResultService, OrgConfigService, SimSetService, StateSpaceService, SeedsService,
         ModelService,
-        SimConfigService,
-        ResultService,
-        OrgConfigService,
-        SimSetService,
-        StateSpaceService,
-        SeedsService
+        OptimiserService,
+        ConfiguratorParamsService,
+        ConvergenceTestService
     ]
 })
 export class CoreModule {}

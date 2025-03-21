@@ -1,15 +1,15 @@
-import environment from "../../../../env/environment";
+import environment from "../../../../../env/environment";
 import {
     ConfiguratorParamData,
     Model,
     OptimiserData,
     OptimiserParameters,
-    OptimiserStateDTO,
     ResultDTO,
-    SimConfigDTO
+    SimConfigDTO,
 } from "aethon-arion-pipeline";
 import { Injectable, Logger } from "@nestjs/common";
 import { ServerEnvironment } from "src/common/types/server.types";
+import { DataSource } from "typeorm";
 
 @Injectable()
 export class ModelService {
@@ -17,7 +17,7 @@ export class ModelService {
     private _dev: boolean = false;
     private _models: Model<ConfiguratorParamData, OptimiserParameters, OptimiserData>[] = [];
 
-    constructor() {
+    constructor(private dataSource: DataSource) {
         const env: ServerEnvironment = environment();
         this._models = env.options.models;
         this._modelNames = this._models.map((model) => model.name);
@@ -33,14 +33,7 @@ export class ModelService {
         if (model) return model;
         throw new Error(`Model ${modelName} not found`);
     }
-
-    optimiserStep(optimiserState: OptimiserStateDTO<OptimiserData>): OptimiserStateDTO<OptimiserData> {
-        const model = this.getModel(optimiserState.modelName);
-        const optimiser = model.optimisers.find((optimiser) => optimiser.name === optimiserState.optimiserName);
-        if (optimiser) return optimiser.step(optimiserState);
-        throw new Error(`Optimiser ${optimiserState.optimiserName} not found on model ${optimiserState.modelName}`);
-    }
-
+    
     calculatePerformance(simConfig: SimConfigDTO, result: ResultDTO): number | null {
         let performance: number;
         try {

@@ -76,20 +76,6 @@ export class SimConfigController {
         return this.simConfigService.findResults(id) as Promise<ResultDTOGet[]>;
     }
 
-    // endpoint that generates a SimConfig for a SimSet
-    @Post()
-    @ApiBody({
-        type: SimConfigDTOCreate,
-        description: "The parameters of the simulation to be created under the simulation set"
-    })
-    @ApiOkResponse({
-        type: SimConfigDTOGet,
-        description: "The SimConfig object created by the request"
-    })
-    create(@Body() simConfigDTOCreate: SimConfigDTOCreate): Promise<SimConfigDTOGet> {
-        return this.simConfigService.create(simConfigDTOCreate) as Promise<SimConfigDTOGet>;
-    }
-
     // endpoint that deletes a SimConfig by ID
     @Delete(":id")
     @ApiParam({

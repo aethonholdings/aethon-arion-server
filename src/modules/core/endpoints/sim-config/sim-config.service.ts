@@ -1,8 +1,8 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { DataSource, Repository } from "typeorm";
-import { OrgConfig, Result, SimConfig, SimSet } from "aethon-arion-db";
-import { ResultDTO, SimConfigDTO, States } from "aethon-arion-pipeline";
-import { ModelService } from "../../services/model.service";
+import { OrgConfig, Result, SimConfig, SimConfigParams, SimSet } from "aethon-arion-db";
+import { OrgConfigDTO, ResultDTO, SimConfigDTO, SimConfigParamsDTO, SimSetDTO, States } from "aethon-arion-pipeline";
+import { ModelService } from "../../services/model/model.service";
 import { SimConfigDTOCreate } from "../../../../common/dto/sim-config.dto";
 import environment from "../../../../../env/environment";
 import { Paginated, Paginator } from "aethon-nestjs-paginate";
@@ -94,32 +94,31 @@ export class SimConfigService {
     }
 
     // THIS BIT WILL CRASH
-    create(simConfigDTO: SimConfigDTOCreate): Promise<SimConfigDTO> {
+    create(orgConfigDTO: OrgConfigDTO, simConfigParmsDTO: SimConfigParamsDTO): Promise<SimConfigDTO> {
         const queries = Promise.all([
-            this.dataSource.getRepository(SimSet).findOneOrFail({ where: { id: simConfigDTO.simSetId } }),
+            this.dataSource.getRepository(SimConfigParams).findOneOrFail({ where: { id: simConfigParmsDTO.id } }),
             this.dataSource
                 .getRepository(OrgConfig)
-                .findOneOrFail({ where: { id: simConfigDTO.orgConfigId }, relations: { configuratorParams: true } })
+                .findOneOrFail({ where: { id: orgConfigDTO.id }, relations: { configuratorParams: true } })
         ]);
 
         return queries
-            .then(([simSet, orgConfig]) => {
-                if (simSet && orgConfig && orgConfig.configuratorParams.modelName === simSet.modelName) {
-                    const simConfig = this.dataSource.getRepository(SimConfig).save({
-                        simSet: simSet,
+            .then(([simConfigParams, orgConfig]) => {
+                if (simConfigParams && orgConfig) {
+                    return this.dataSource.getRepository(SimConfig).save({
                         orgConfig: orgConfig,
                         runCount: 0,
                         dispatchedRuns: 0,
-                        randomStreamType: simConfigDTO?.randomStreamType
-                            ? simConfigDTO?.randomStreamType
+                        randomStreamType: simConfigParams.randomStreamType
+                            ? simConfigParams.randomStreamType
                             : this._randomStreamType,
-                        days: simConfigDTO?.days ? simConfigDTO.days : this._simulationDays,
+                        days: simConfigParams.days ? simConfigParams.days : this._simulationDays,
                         converged: false,
                         running: false,
                         saveStateSpace: false,
-                        state: States.PENDING
+                        state: States.PENDING,
+                        simConfigParams: simConfigParams,
                     });
-                    return Promise.all([simConfig, simSet.save()]);
                 } else {
                     throw new Error("Incompatible model signature with SimSet");
                 }

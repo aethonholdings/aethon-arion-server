@@ -43,25 +43,6 @@ export class SimSetController {
         return this.simSetService.create(simSet) as Promise<SimSetDTOGet>;
     }
 
-    // endpoint that fetches an array of the Results of a SimSet
-    @Get(":id/result")
-    @ApiParam({
-        name: "paginateQuery",
-        type: PaginateQuery,
-        required: false,
-        description: "The pagination query setting out the Where and OrderBy clauses and pagination schema requested"
-    })
-    @ApiOkResponse({
-        type: Paginated<ResultDTOGet>,
-        description: "A Paginated<Result> object"
-    })
-    async results(
-        @GetPaginator(resultPaginationConfig) paginator,
-        @Param("id") simSetId: number
-    ): Promise<Paginated<ResultDTOGet>> {
-        return this.simSetService.findResults(simSetId, paginator);
-    }
-
     // endpoint that deletes a SimSet
     @Delete(":id")
     @ApiParam({

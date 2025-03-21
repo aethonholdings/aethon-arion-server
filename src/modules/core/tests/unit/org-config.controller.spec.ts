@@ -5,7 +5,7 @@ import { DataSource } from "typeorm";
 import { ModuleMetadata } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { OrgConfigService } from "../../endpoints/org-config/org-config.service";
-import { ModelService } from "../../services/model.service";
+import { ModelService } from "../../services/model/model.service";
 import { OrgConfigDTO } from "aethon-arion-pipeline";
 import { orgConfigControllerCreateTestData } from "../data/org-config.controller.test.data";
 import { OrgConfig } from "aethon-arion-db";

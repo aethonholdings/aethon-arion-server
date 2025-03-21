@@ -1,80 +1,85 @@
 import environment from "../../../../../env/environment";
-import { OptimiserState, SimSet } from "aethon-arion-db";
-import { SimSetDTO, States } from "aethon-arion-pipeline";
+import { SimConfigParams, SimSet } from "aethon-arion-db";
+import {
+    ConfiguratorParamData,
+    Model,
+    Optimiser,
+    OptimiserData,
+    OptimiserParameters,
+    SimSetDTO,
+    States
+} from "aethon-arion-pipeline";
 import { Injectable, Logger } from "@nestjs/common";
 import { DataSource } from "typeorm";
-import { ResultService } from "../result/result.service";
-import { ModelService } from "../../services/model.service";
+import { ModelService } from "../../services/model/model.service";
 import { SimSetDTOCreate } from "../../../../common/dto/sim-set.dto";
-import { Comparator, Paginator } from "aethon-nestjs-paginate";
+import { OptimiserService } from "../../services/optimiser/optimiser.service";
+import { ServerEnvironment } from "src/common/types/server.types";
 
 @Injectable()
 export class SimSetService {
     private _logger: Logger = new Logger(SimSetService.name);
     private _dev: boolean = false;
+    private _env: ServerEnvironment = environment();
 
     constructor(
         private dataSource: DataSource,
-        private resultService: ResultService,
-        private modelService: ModelService
+        private modelService: ModelService,
+        private optimiserService: OptimiserService
     ) {
         this._dev = environment().root.dev;
     }
 
     findAll(query: any): Promise<SimSetDTO[]> {
-        return this.dataSource
-            .getRepository(SimSet)
-            .find(query)
-            .then((simSets: SimSet[]) => {
-                return simSets.map((simSet) => simSet.toDTO());
-            });
+        return this.dataSource.getRepository(SimSet).find(query);
     }
 
     findOne(id: number): Promise<SimSetDTO> {
-        return this.dataSource
-            .getRepository(SimSet)
-            .findOneOrFail({
-                where: { id: id },
-                relations: { optimiserStates: true }
-            })
-            .then((simSet: SimSet) => simSet.toDTO());
-    }
-
-    findResults(simSetId: number, paginator: Paginator): Promise<any> {
-        if (this._dev) this._logger.log("Fetching SimSet result data");
-        paginator.query.where = [["simSetId", Comparator.EQUAL, simSetId.toString()]];
-        return this.resultService.findAll(paginator);
+        return this.dataSource.getRepository(SimSet).findOneOrFail({
+            where: { id: id },
+            relations: { optimiserStates: true, simConfigParams: true }
+        });
     }
 
     async create(simSetDTO: SimSetDTOCreate): Promise<SimSetDTO> {
-        const model = this.modelService.getModel(simSetDTO.modelName);
+        const model: Model<ConfiguratorParamData, OptimiserParameters, OptimiserData> = this.modelService.getModel(
+            simSetDTO.modelName
+        );
         if (model) {
-            // this is a long-winded commit to the database, but a more efficient approach fails on TypeORM
-            // keepign this as is until improved using the query builder
+            // find the SimConfigParams or initialise them to default
+            let simConfigParams: SimConfigParams;
+            if (simSetDTO.simConfigParams && simSetDTO.simConfigParams.id) {
+                simConfigParams = await this.dataSource.getRepository(SimConfigParams).findOneOrFail({
+                    where: { id: simSetDTO.simConfigParams.id }
+                });
+            } else {
+                simConfigParams = await this.dataSource.getRepository(SimConfigParams).save({
+                    days: this._env.options.simulationDays,
+                    randomStreamType: this._env.options.randomStreamType
+                });
+            }
 
             // Create the SimSet with an empty optimiserStates array
+            // initialise withthe default optimiser by default for the time being
+            let optimiser: Optimiser<ConfiguratorParamData, OptimiserParameters, OptimiserData>;
+            if (simSetDTO.optimiserName) {
+                optimiser = model.getOptimiser(simSetDTO.optimiserName);
+            } else {
+                optimiser = model.getDefaultOptimiser();
+            }
             const simSet: SimSet = await this.dataSource.getRepository(SimSet).save({
                 ...simSetDTO,
                 modelParams: model.getParameters(),
-                optimiserName: model.getDefaultOptimiser().name,
+                optimiserName: optimiser.name,
                 state: States.PENDING,
-                optimiserStates: []
+                optimiserStates: [],
+                simConfigParams: simConfigParams
             });
 
             // Create the OptimiserState and attach it to the SimSet
-            const optimiserState: OptimiserState = await this.dataSource.getRepository(OptimiserState).save({
-                ...model.getDefaultOptimiser().step(),
-                stepCount: 0,
-                simSet: simSet,
-                start: new Date(),
-                status: States.PENDING,
-                percentComplete: 0,
-                modelName: model.name,
-                optimiserName: model.getDefaultOptimiser().name,
-                converged: false
-            });
+            await this.optimiserService.createState(simSet, optimiser.step());
 
-            // Return the new SimSet
+            // return the SimSet
             return this.findOne(simSet.id);
         } else {
             throw new Error("Invalid model name");
