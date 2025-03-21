@@ -34,16 +34,6 @@ export class ModelService {
         throw new Error(`Model ${modelName} not found`);
     }
     
-    calculatePerformance(simConfig: SimConfigDTO, result: ResultDTO): number | null {
-        let performance: number;
-        try {
-            performance = this.getModel(simConfig.orgConfig.type).getPerformance(result);
-        } catch (error) {
-            performance = null;
-        }
-        return performance;
-    }
-
     deleteRecord(id: number, logger: Logger, repository: any): Promise<number> {
         return repository.delete({ id: id }).then((result) => {
             if (result.affected) return id;

@@ -31,8 +31,7 @@ export class ResultService {
                 where: { id: resultDto.simConfigId },
                 relations: {
                     orgConfig: { configuratorParams: true },
-                    results: true,
-                    simConfigParams: true
+                    results: true
                 }
             })
             .then((simConfig) => {
@@ -46,15 +45,18 @@ export class ResultService {
                 result.orgConfigType = simConfig.orgConfig.configuratorParams.modelName;
                 simConfig.results.push(result);
                 result.priorityIntensity = Utils.modulo(resultDto.priorityTensor);
-                result.performance = this.modelService.calculatePerformance(result.simConfig.toDTO(), result.toDTO());
+                result.performance = this.modelService.getModel(simConfig.orgConfig.configuratorParams.modelName).getPerformance(resultDto);
                 // update the simConfig statistics
+                console.log(`----------- ${result.performance} -----------`);
+                // <- open -> this could be done with an SQL query tbh
                 if (this._dev) this._logger.log("Updating simConfig statistics");
-                const resultSet = new ResultSet(simConfig.results.map((result) => result.toDTO()));
+                const resultSet = new ResultSet(simConfig.results.map((result) => result));
                 const summaryStatistics = resultSet.getSummary();
                 simConfig.avgPerformance = summaryStatistics.avgPerformance;
                 const currentStdDev = simConfig.stdDevPerformance;
                 simConfig.stdDevPerformance = summaryStatistics.stDevPerformance;
                 simConfig.entropy = summaryStatistics.entropy;
+                // <- close -> this could be done with an SQL query tbh
                 simConfig.runCount++;
                 // check for convergence
                 let converged: boolean = false;
