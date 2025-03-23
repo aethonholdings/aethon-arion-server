@@ -13,6 +13,7 @@ export const orgConfigControllerCreateTestData: { [key: string]: ConfiguratorPar
             actionStateProbability: 0.85
         },
         configuratorName: "C1Configurator",
-        modelName: "C1"
+        modelName: "C1",
+        multipleOrgConfigs: true,
     }
 };

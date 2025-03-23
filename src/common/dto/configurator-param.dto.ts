@@ -1,6 +1,6 @@
 import { ApiProperty, PickType } from "@nestjs/swagger";
 import { ConfiguratorParamData } from "aethon-arion-pipeline";
-import { IsNumber, IsObject, IsString } from "class-validator";
+import { IsBoolean, IsNumber, IsObject, IsString } from "class-validator";
 
 export class ConfiguratorParamsDTOGet {
     @IsNumber()
@@ -56,10 +56,20 @@ export class ConfiguratorParamsDTOGet {
         example: "b7c4067460b6dda6cf01dd9831b13045b4dfc721"
     })
     hash: string;
+
+    @IsBoolean()
+    @ApiProperty({
+        name: "multipleOrgConfigs",
+        type: Boolean,
+        description: "Flag indicating whether the ConfiguratorParamsDTO requires multiple OrgConfigs",
+        example: true
+    })
+    multipleOrgConfigs: boolean;
 }
 
 export class ConfiguratorParamsDTOCreate extends PickType(ConfiguratorParamsDTOGet, [
     "modelName",
     "configuratorName",
-    "data"
+    "data",
+    "multipleOrgConfigs"
 ]) {}

@@ -22,15 +22,16 @@ export class ConfiguratorParamsService {
     async create(
         model: Model<ConfiguratorParamData, OptimiserParameters, OptimiserData>,
         configuratorParamData: ConfiguratorParamData,
-        configuratorName?: string
+        configuratorName: string,
+        multipleOrgConfigs: boolean
     ): Promise<ConfiguratorParamsDTO<ConfiguratorParamData>> {
-        if (!configuratorName) configuratorName = model.getDefaultConfigurator().name;
         // create a new configurator params
         return this.dataSource.getRepository(ConfiguratorParams).save({
             modelName: model.name,
             configuratorName: configuratorName,
             data: configuratorParamData,
-            hash: new ObjectHash(configuratorParamData).toString()
+            hash: new ObjectHash(configuratorParamData).toString(),
+            multipleOrgConfigs: multipleOrgConfigs
         });
     }
 

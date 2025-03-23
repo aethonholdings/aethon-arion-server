@@ -66,20 +66,19 @@ export class OptimiserService {
         const optimiser = model.getOptimiser(optimiserState.optimiserName);
 
         // get the configParams required to be completed for this step
-        const configParams = optimiser.getStateRequiredSimConfigs(optimiserState);
+        const configParams = optimiser.getStateRequiredConfiguratorParams(optimiserState);
 
         // cycle through all the simconfigs required to perform the step
         for (let configParam of configParams) {
             // check if the configuratorParams instance exists
             let id: number = (await this.configuratorParamsService.findOne({
-                configParams: configParam
+                configParams: configParam.configuratorParamData
             }))?.id;
-
             // for each configuratorParams, check whether it exists and is completed
             if (!id) {
                 // no configuratorParams found, create a new one
                 const configuratorParamsDTO: ConfiguratorParamsDTO<ConfiguratorParams> =
-                    await this.configuratorParamsService.create(model, configParam);
+                    await this.configuratorParamsService.create(model, configParam.configuratorParamData, model.getDefaultConfigurator().name, configParam.multipleOrgConfigs);
                 // create a convergence test
                 id = (await this.convergenceTestService.create(optimiserState.simSet.simConfigParams, configuratorParamsDTO)).id;
             }

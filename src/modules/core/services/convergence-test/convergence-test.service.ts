@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { And, DataSource, Not } from "typeorm";
+import { DataSource } from "typeorm";
 import { ConvergenceTest } from "aethon-arion-db";
 import {
     ConfiguratorParamData,
@@ -55,11 +55,17 @@ export class ConvergenceTestService {
                 return convergenceTest;
             })
             .then(async (convergenceTest: ConvergenceTest) => {
-                // generate a sim config based on the convergence test
-                // return the convergence test
-                const orgConfig: OrgConfigDTO = await this.generateOrgConfig(convergenceTest);
-                await this.generateSimConfig(convergenceTest, orgConfig);
+                // generate a set of sim config based on the convergence test
+                // ensure that multiple simConfigs and orgConfigs are generated when the
+                // configuratorParams.multipleOrgConfigs flag is set to true
+                let orgConfigCount = 1;
+                if (convergenceTest.configuratorParams.multipleOrgConfigs) orgConfigCount = this._env.options.minRuns;
+                for (let i = 0; i < orgConfigCount; i++) {
+                    const orgConfig: OrgConfigDTO = await this.generateOrgConfig(convergenceTest);
+                    await this.generateSimConfig(convergenceTest, orgConfig);
+                }
                 await this.dataSource.getRepository(ConvergenceTest).update(convergenceTest.id, convergenceTest);
+                // return the convergence test
                 return this.dataSource.getRepository(ConvergenceTest).findOne({
                     where: { id: convergenceTest.id },
                     relations: { simConfigs: true, simConfigParams: true, configuratorParams: true }
@@ -106,6 +112,7 @@ export class ConvergenceTestService {
         convergenceTest.simConfigCount = convergenceTest.simConfigs.length;
 
         let completed: number = 0;
+        let converged: number = 0;
         let avgSumTmp: number = 0;
         let stdDevSumTmp: number = 0;
         convergenceTest.resultCount = 0;
@@ -122,6 +129,7 @@ export class ConvergenceTestService {
             if (simConfig.state === States.FAILED) convergenceTest.state = States.FAILED;
             if (simConfig.state === States.RUNNING && convergenceTest.state !== States.FAILED)
                 convergenceTest.state = States.RUNNING;
+            if (simConfig.state === States.COMPLETED && simConfig.converged) converged++;
             convergenceTest.orgConfigCount;
             convergenceTest.resultCount += simConfig.runCount;
             convergenceTest.dispatchedRuns += simConfig.dispatchedRuns;
@@ -129,8 +137,6 @@ export class ConvergenceTestService {
             avgSumTmp += simConfig.avgPerformance;
             stdDevSumTmp += simConfig.stdDevPerformance;
         }
-        if (convergenceTest.simConfigs.length > 0 && completed === convergenceTest.simConfigs.length)
-            convergenceTest.state = States.COMPLETED;
 
         // the following can be done with a query
         if (convergenceTest.simConfigCount) {
@@ -140,6 +146,29 @@ export class ConvergenceTestService {
             convergenceTest.avgPerformance = null;
             convergenceTest.stdDevPerformance = null;
         }
+
+        // check for convergence
+
+        if (
+            convergenceTest.simConfigs.length > 0 &&
+            completed === convergenceTest.simConfigs.length &&
+            converged === convergenceTest.simConfigs.length
+        ) {
+            if (
+                convergenceTest.stdDevPerformance / convergenceTest.avgPerformance <
+                this._env.options.convergenceMargin
+            ) {
+                // the convergence test has converged
+                convergenceTest.state = States.COMPLETED;
+                convergenceTest.converged = true;
+            } else {
+                // the convergence test has not converged, we need to generate more orgConfigs until
+                // the standard deviation drops below the threshold required in the environment options
+                const orgConfig: OrgConfigDTO = await this.generateOrgConfig(convergenceTest);
+                await this.generateSimConfig(convergenceTest, orgConfig);
+            }
+        }
+
         // update the convergence test
         await this.dataSource
             .getRepository(ConvergenceTest)
