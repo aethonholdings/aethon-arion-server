@@ -1,10 +1,11 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { DataSource, Repository } from "typeorm";
 import { Result, StateSpacePoint, SimConfig } from "aethon-arion-db";
-import { Utils, ResultDTO, ResultSet } from "aethon-arion-pipeline";
+import { Utils, ResultDTO, ResultSet, States } from "aethon-arion-pipeline";
 import { ModelService } from "../../services/model/model.service";
 import environment from "../../../../../env/environment";
 import { Paginated, Paginator } from "aethon-nestjs-paginate";
+import { ConvergenceTestService } from "../../services/convergence-test/convergence-test.service";
 
 @Injectable()
 export class ResultService {
@@ -16,7 +17,8 @@ export class ResultService {
 
     constructor(
         private dataSource: DataSource,
-        private modelService: ModelService
+        private modelService: ModelService,
+        private convergenceTestService: ConvergenceTestService
     ) {
         const env = environment();
         this._dev = env.root.dev;
@@ -31,6 +33,11 @@ export class ResultService {
                 where: { id: resultDto.simConfigId },
                 relations: {
                     orgConfig: { configuratorParams: true },
+                    convergenceTest: {
+                        simConfigParams: true,
+                        configuratorParams: true,
+                        simConfigs: true
+                    },
                     results: true
                 }
             })
@@ -47,7 +54,6 @@ export class ResultService {
                 result.priorityIntensity = Utils.modulo(resultDto.priorityTensor);
                 result.performance = this.modelService.getModel(simConfig.orgConfig.configuratorParams.modelName).getPerformance(resultDto);
                 // update the simConfig statistics
-                console.log(`----------- ${result.performance} -----------`);
                 // <- open -> this could be done with an SQL query tbh
                 if (this._dev) this._logger.log("Updating simConfig statistics");
                 const resultSet = new ResultSet(simConfig.results);
@@ -71,7 +77,7 @@ export class ResultService {
                 }
                 if (converged) {
                     if (this._dev) this._logger.log("Simulation converged");
-                    simConfig.state = "completed";
+                    simConfig.state = States.COMPLETED;
                     if (!simConfig.converged) {
                         if (this._dev) this._logger.log("Marking as completed");
                         simConfig.end = new Date();
@@ -84,7 +90,11 @@ export class ResultService {
                 if (this._dev) this._logger.log("Saving result");
                 return Promise.all([simConfig.save(), result.save()]);
             })
-            .then((results) => {
+            .then(async (results) => {
+                await this.convergenceTestService.touchConvergenceTest(results[0].convergenceTest);
+                return results;
+            })
+            .then(async (results) => {
                 // save the state space if applicable
                 const result = results[1];
                 if (this._dev) this._logger.log("Result saved with id: " + result.id);
@@ -93,7 +103,7 @@ export class ResultService {
                     resultDto.stateSpace.forEach((stateSpacePointDto) => {
                         stateSpacePointDto.resultId = result.id;
                     });
-                    this.dataSource
+                    await this.dataSource
                         .getRepository(StateSpacePoint)
                         .save(resultDto.stateSpace)
                         .then(() => {
@@ -127,7 +137,7 @@ export class ResultService {
                 }
             })
             .then((result) => {
-                return result.toDTO();
+                return result;
             });
     }
 }

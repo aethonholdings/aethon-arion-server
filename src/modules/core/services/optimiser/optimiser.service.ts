@@ -1,26 +1,27 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { ModelService } from "../model/model.service";
 import { DataSource } from "typeorm";
-import {
-    ConfiguratorParamsDTO,
-    ObjectHash,
-    OptimiserData,
-    OptimiserStateDTO,
-    SimSetDTO,
-    States
-} from "aethon-arion-pipeline";
-import { ConfiguratorParams, OptimiserState } from "aethon-arion-db";
+import { ConfiguratorParamsDTO, OptimiserData, OptimiserStateDTO, SimSetDTO, States } from "aethon-arion-pipeline";
+import { ConfiguratorParams, ConvergenceTest, OptimiserState } from "aethon-arion-db";
 import { ConvergenceTestService } from "../convergence-test/convergence-test.service";
 import { ConfiguratorParamsService } from "../configurator-params/configurator-params.service";
+import { ServerEnvironment } from "src/common/types/server.types";
+import environment from "env/environment";
 
 @Injectable()
 export class OptimiserService {
+    private _dev: boolean = false;
+    private _logger: Logger = new Logger(OptimiserService.name);
+    private _env: ServerEnvironment = environment();
+
     constructor(
         private dataSource: DataSource,
         private modelService: ModelService,
         private convergenceTestService: ConvergenceTestService,
         private configuratorParamsService: ConfiguratorParamsService
-    ) {}
+    ) {
+        this._dev = this._env.root.dev;
+    }
 
     async createState(
         simSetDTO: SimSetDTO,
@@ -30,66 +31,97 @@ export class OptimiserService {
         let stepCount: number;
         simSetDTO?.optimiserStates ? (stepCount = simSetDTO.optimiserStates.length) : (stepCount = 0);
 
-        const optimiserState = await this.dataSource.getRepository(OptimiserState).save({
-            ...optimiserStateDTO,
-            stepCount: stepCount,
-            simSet: simSetDTO,
-            start: new Date(),
-            status: States.PENDING,
-            percentComplete: 0,
-            modelName: model.name,
-            converged: false
-        });
-
-        // Touch the state to kick off the optimiser
-        await this.touchState(optimiserState);
-        return optimiserState;
+        return this.dataSource
+            .getRepository(OptimiserState)
+            .save({
+                ...optimiserStateDTO,
+                stepCount: stepCount,
+                simSet: simSetDTO,
+                start: new Date(),
+                status: States.PENDING,
+                percentComplete: 0,
+                modelName: model.name,
+                converged: false
+            })
+            .then((optimiserState: OptimiserState) => {
+                return this.dataSource
+                    .getRepository(OptimiserState)
+                    .findOne({ where: { id: optimiserState.id }, relations: { simSet: { simConfigParams: true } } });
+            })
+            .then(async (optimiserState: OptimiserState) => {
+                await this.touchState(optimiserState);
+                return optimiserState;
+            });
     }
 
-    touchAll() {}
-
-    async touchState(optimiserState: OptimiserStateDTO<OptimiserData>): Promise<OptimiserStateDTO<OptimiserData>> {
+    async touchState(optimiserState: OptimiserState): Promise<OptimiserState> {
+        if (this._dev) this._logger.log(`Touching optimiser state ${optimiserState.id}`);
         // check if converged
-        if (optimiserState.status === States.COMPLETED && optimiserState.converged) return optimiserState;
+        if (
+            (optimiserState.status === States.COMPLETED && optimiserState.converged) ||
+            optimiserState.status === States.FAILED
+        )
+            return optimiserState;
         const model = this.modelService.getModel(optimiserState.modelName);
         const optimiser = model.getOptimiser(optimiserState.optimiserName);
-        if (optimiserState.status === States.PENDING) {
-            // get the configParams required to be completed for this step
-            const configParams = optimiser.getStateRequiredSimConfigs(optimiserState);
 
-            // cycle through all the simconfigs required to perform the step
-            let completed = true;
-            for (let configParam of configParams) {
-                // check if the simconfig exists
-                let tmp = await this.configuratorParamsService.findOne({ configParams: configParam });
+        // get the configParams required to be completed for this step
+        const configParams = optimiser.getStateRequiredSimConfigs(optimiserState);
 
-                // for each configuratorParams, check whether it exists and is completed
-                if (!tmp) {
-                    // no configuratorParams found, create a new one
-                    completed = false;
-                    const configuratorParamsDTO: ConfiguratorParamsDTO<ConfiguratorParams> =
-                        await this.configuratorParamsService.create(model, configParam);
-                    // create a convergence test
-                    await this.convergenceTestService.create(
-                        optimiserState.simSet.simConfigParams,
-                        configuratorParamsDTO
-                    );
-                } else {
-                    if (tmp.data.status !== States.COMPLETED) completed = false;
-                }
+        // cycle through all the simconfigs required to perform the step
+        for (let configParam of configParams) {
+            // check if the configuratorParams instance exists
+            let id: number = (await this.configuratorParamsService.findOne({
+                configParams: configParam
+            }))?.id;
+
+            // for each configuratorParams, check whether it exists and is completed
+            if (!id) {
+                // no configuratorParams found, create a new one
+                const configuratorParamsDTO: ConfiguratorParamsDTO<ConfiguratorParams> =
+                    await this.configuratorParamsService.create(model, configParam);
+                // create a convergence test
+                id = (await this.convergenceTestService.create(optimiserState.simSet.simConfigParams, configuratorParamsDTO)).id;
             }
-            if (completed) {
+            // the configurator params exist; check if there are convergence tests against it
+            // vis-a-vis the SimSet
+            const convergenceTests = await this.dataSource
+                .createQueryBuilder(ConvergenceTest, "convergenceTest")
+                .leftJoinAndSelect("convergenceTest.simConfigs", "simConfigs")
+                .andWhere("convergenceTest.configuratorParamsId = :configuratorParamsId", {
+                    configuratorParamsId: id
+                })
+                .andWhere("convergenceTest.simConfigParamsId = :simConfigParamsId", {
+                    simConfigParamsId: optimiserState.simSet.simConfigParams.id
+                })
+                .getMany();
+            let completed: number = 0;
+            optimiserState.status = States.PENDING;
+            convergenceTests.forEach(async (convergenceTest) => {
+                // touch the convergence test
+                await this.convergenceTestService.touchConvergenceTest(convergenceTest);
+                if (convergenceTest.state !== States.COMPLETED) completed++;
+                if (convergenceTest.state === States.FAILED) optimiserState.status = States.FAILED;
+                if (convergenceTest.state === States.RUNNING && optimiserState.status !== States.FAILED)
+                    optimiserState.status = States.RUNNING;
+            });
+            if (convergenceTests.length > 0 && completed === convergenceTests.length) {
                 optimiserState.status = States.COMPLETED;
                 optimiserState.end = new Date();
                 optimiserState.durationSec = (optimiserState.end.getTime() - optimiserState.start.getTime()) / 1000;
-                this.dataSource.getRepository(OptimiserState).save(optimiserState);
-            } else {
-                return optimiserState;
+                optimiserState.percentComplete = 1;
             }
         }
-        if (optimiserState.status === States.COMPLETED) {
-            // step the optimiser forward
-            return optimiser.step(optimiserState);
-        }
+        return this.dataSource
+            .getRepository(OptimiserState)
+            .save(optimiserState)
+            .then((optimiserState) => {
+                if (this._dev) this._logger.log(`Optimiser state ${optimiserState.id} touched`);
+                // step the optimiser
+                if (this._dev) this._logger.log(`Stepping optimiser ${optimiser.name}`);
+                if (optimiserState.converged && optimiserState.status === States.COMPLETED)
+                    this.createState(optimiserState.simSet, optimiser.step());
+                return optimiserState;
+            });
     }
 }

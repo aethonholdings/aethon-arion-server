@@ -1,7 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { DataSource, Repository } from "typeorm";
-import { ConvergenceTest, OrgConfig, Result, SimConfig, SimConfigParams } from "aethon-arion-db";
-import { ConvergenceTestDTO, OrgConfigDTO, RandomStreamType, ResultDTO, SimConfigDTO, States } from "aethon-arion-pipeline";
+import { ConvergenceTest, Result, SimConfig } from "aethon-arion-db";
+import { RandomStreamType, ResultDTO, SimConfigDTO, States } from "aethon-arion-pipeline";
 import { ModelService } from "../../services/model/model.service";
 import environment from "../../../../../env/environment";
 import { Paginated, Paginator } from "aethon-nestjs-paginate";
@@ -10,7 +10,7 @@ import { Paginated, Paginator } from "aethon-nestjs-paginate";
 export class SimConfigService {
     private _logger: Logger = new Logger(SimConfigService.name);
     private _dev: boolean = false;
-    private _randomStreamType: "static" | "random" = "random"; // toDo: type to RandomStreamType
+    private _randomStreamType: RandomStreamType = "random"; // toDo: type to RandomStreamType
     private _simulationDays = 100;
 
     constructor(
@@ -41,7 +41,7 @@ export class SimConfigService {
                     if (this._dev) this._logger.log("Next simconfig fetched");
                     if (simConfig.dispatchedRuns === 0) simConfig.start = new Date();
                     simConfig.dispatchedRuns++;
-                    simConfig.state = "running";
+                    simConfig.state = States.RUNNING;
                     return simConfig.save().then((simConfig) => {
                         if (this._dev) this._logger.log("SimConfig updated");
                         return simConfig.toDTO();
@@ -68,7 +68,7 @@ export class SimConfigService {
             const tmp: Paginated<SimConfigDTO> = {
                 ...paginated,
                 data: paginated.data.map((simConfig) => {
-                    return simConfig.toDTO();
+                    return simConfig;
                 })
             };
             return tmp;
@@ -88,7 +88,7 @@ export class SimConfigService {
                 where: { simConfigId: id }
             })
             .then((results: Result[]) => {
-                return results.map((result) => result.toDTO());
+                return results.map((result) => result);
             });
     }
 

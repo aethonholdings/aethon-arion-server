@@ -5,6 +5,7 @@ import { DatabaseModule } from "../database/database.module";
 import { CoreModule } from "../core/core.module";
 import { OpenAPIModule } from "../openapi/openapi.module";
 import environment from "../../../env/environment";
+import { ScheduleModule } from "@nestjs/schedule";
 
 const env = environment();
 
@@ -19,6 +20,7 @@ const env = environment();
             type: env.database.type as any,
             autoLoadEntities: true
         }),
+        ScheduleModule.forRoot(),
         DatabaseModule,
         CoreModule,
         OpenAPIModule
