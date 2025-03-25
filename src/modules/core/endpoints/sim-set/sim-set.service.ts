@@ -90,7 +90,7 @@ export class SimSetService {
                     simConfigParams: simConfigParams
                 })
                 .then(async (simSet: SimSet) => {
-                    await this.optimiserService.createState(simSet, optimiser.step());
+                    await this.optimiserService.createState(simSet, optimiser.initialise());
                     return this.dataSource.getRepository(SimSet).findOneOrFail({
                         where: { id: simSet.id },
                         relations: { optimiserStates: { simSet: { simConfigParams: true } }, simConfigParams: true }
@@ -127,19 +127,25 @@ export class SimSetService {
 
         if (simSet.optimiserStates.length > 0) {
             let completed: number = 0;
-            simSet.state = States.PENDING;
-            simSet.optimiserStates.forEach(async (state) => {
-                await this.optimiserService.touchState(state);
-                if (state.status === States.COMPLETED) completed++;
-                if (state.status === States.FAILED) simSet.state = States.FAILED;
-                if (state.status === States.RUNNING && simSet.state !== States.FAILED) simSet.state = States.RUNNING;
+            simSet.optimiserStates.forEach(async (optimiserState) => {
+                await this.optimiserService.touchState(optimiserState);
+                if (optimiserState.status === States.COMPLETED) completed++;
+                if (optimiserState.status === States.FAILED) simSet.state = States.FAILED;
+                if (optimiserState.status === States.RUNNING && simSet.state !== States.FAILED)
+                {
+                    simSet.state = States.RUNNING;
+                }
             });
             if (simSet.optimiserStates.length > 0 && completed === simSet.optimiserStates.length)
                 simSet.state = States.COMPLETED;
         }
-        return await this.dataSource
+        await this.dataSource.getRepository(SimSet).save(simSet);
+        return this.dataSource
             .getRepository(SimSet)
-            .save(simSet)
+            .findOneOrFail({
+                where: { id: simSet.id },
+                relations: { optimiserStates: { simSet: { simConfigParams: true } }, simConfigParams: true }
+            })
             .then((simSet) => {
                 if (this._dev) this._logger.log(`Sim set ${simSet.id} touched`);
                 return simSet;

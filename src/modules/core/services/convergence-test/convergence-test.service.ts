@@ -118,6 +118,7 @@ export class ConvergenceTestService {
         convergenceTest.resultCount = 0;
         convergenceTest.dispatchedRuns = 0;
         convergenceTest.processingTimeSec = 0;
+        convergenceTest.completedSimConfigCount = 0;
         convergenceTest.simConfigCount = convergenceTest.simConfigs.length;
         convergenceTest.orgConfigCount = convergenceTest.simConfigCount;
 
@@ -138,6 +139,7 @@ export class ConvergenceTestService {
             stdDevSumTmp += simConfig.stdDevPerformance;
         }
 
+        const prevStdev = convergenceTest.stdDevPerformance;
         // the following can be done with a query
         if (convergenceTest.simConfigCount) {
             convergenceTest.avgPerformance = avgSumTmp / convergenceTest.simConfigCount;
@@ -148,17 +150,18 @@ export class ConvergenceTestService {
         }
 
         // check for convergence
-
         if (
             convergenceTest.simConfigs.length > 0 &&
             completed === convergenceTest.simConfigs.length &&
             converged === convergenceTest.simConfigs.length
         ) {
             if (
-                convergenceTest.stdDevPerformance / convergenceTest.avgPerformance <
-                this._env.options.convergenceMargin
+                (prevStdev !== 0 &&
+                    Math.abs((convergenceTest.stdDevPerformance - prevStdev) / prevStdev) <=
+                        this._env.options.convergenceMargin) ||
+                convergenceTest.stdDevPerformance === 0
             ) {
-                // the convergence test has converged
+                // the convergence test is successful
                 convergenceTest.state = States.COMPLETED;
                 convergenceTest.converged = true;
             } else {
