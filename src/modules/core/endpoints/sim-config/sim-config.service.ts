@@ -31,35 +31,38 @@ export class SimConfigService {
                 relations: {
                     orgConfig: {
                         configuratorParams: true
-                    }
+                    },
+                    convergenceTest: true
                 },
                 where: { converged: false },
-                order: { id: "ASC" }
+                order: { convergenceTestId: "ASC", id: "ASC" }
             })
-            .then((simConfig) => {
+            .then(async (simConfig) => {
                 if (simConfig !== null) {
                     if (this._dev) this._logger.log("Next simconfig fetched");
                     if (simConfig.dispatchedRuns === 0) simConfig.start = new Date();
                     simConfig.dispatchedRuns++;
                     simConfig.state = States.RUNNING;
-                    return simConfig.save().then((simConfig) => {
-                        if (this._dev) this._logger.log("SimConfig updated");
-                        return simConfig.toDTO();
+
+                    if (this._dev) {
+                        this._logger.log("SimConfig updated");
+                        this._logger.log("Updating convergence test");
+                    }
+                    await this.dataSource.getRepository(ConvergenceTest).update(simConfig.convergenceTest.id, {
+                        dispatchedRuns: simConfig.convergenceTest.dispatchedRuns + 1,
+                        state: States.RUNNING
                     });
+                    if (this._dev) this._logger.log("Convergence test updated");
+                    return simConfig.save();
                 }
             });
     }
 
     findOne(id: number): Promise<SimConfigDTO> {
-        return this.dataSource
-            .getRepository(SimConfig)
-            .findOne({
-                relations: ["orgConfig", "simSet", "simConfigParams"],
-                where: { id: id }
-            })
-            .then((simConfig) => {
-                return simConfig.toDTO();
-            });
+        return this.dataSource.getRepository(SimConfig).findOne({
+            relations: ["orgConfig", "simSet", "simConfigParams"],
+            where: { id: id }
+        });
     }
 
     findAll(paginator: Paginator): Promise<Paginated<SimConfigDTO>> {
@@ -92,17 +95,22 @@ export class SimConfigService {
             });
     }
 
-    async create(orgConfigId: number, convergenceTestId: number, randomStreamType?: RandomStreamType, days?: number): Promise<SimConfigDTO> {
-        const convergenceTest = await this.dataSource.getRepository(ConvergenceTest).findOneOrFail({ where: { id: convergenceTestId }, relations: ["simConfigParams"] });
+    async create(
+        orgConfigId: number,
+        convergenceTestId: number,
+        randomStreamType?: RandomStreamType,
+        days?: number
+    ): Promise<SimConfigDTO> {
+        const convergenceTest = await this.dataSource
+            .getRepository(ConvergenceTest)
+            .findOneOrFail({ where: { id: convergenceTestId }, relations: ["simConfigParams"] });
         const simConfigParamsId = convergenceTest.simConfigParams.id;
         if (orgConfigId && convergenceTestId) {
             return this.dataSource.getRepository(SimConfig).save({
                 orgConfigId: orgConfigId,
                 runCount: 0,
                 dispatchedRuns: 0,
-                randomStreamType: randomStreamType
-                    ? randomStreamType
-                    : this._randomStreamType,
+                randomStreamType: randomStreamType ? randomStreamType : this._randomStreamType,
                 days: days ? days : this._simulationDays,
                 converged: false,
                 running: false,

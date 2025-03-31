@@ -1,4 +1,4 @@
-import { IsArray, IsIn, IsNotEmpty, IsObject, IsOptional, IsString } from "class-validator";
+import { IsArray, IsIn, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString } from "class-validator";
 import { ApiProperty, PickType } from "@nestjs/swagger";
 import { ModelParamsDTO, SimConfigParamsDTO, SimSetDTO, StateType } from "aethon-arion-pipeline";
 import { OptimiserState } from "aethon-arion-db";
@@ -35,7 +35,7 @@ export class SimSetDTOGet implements SimSetDTO {
     modelName: string;
 
     @IsString()
-    @IsNotEmpty()
+    @IsOptional()
     @ApiProperty({
         name: "optimiserName",
         type: String,
@@ -43,6 +43,16 @@ export class SimSetDTOGet implements SimSetDTO {
         example: "Gradient Ascent"
     })
     optimiserName: string;
+
+    @IsString()
+    @IsOptional()
+    @ApiProperty({
+        name: "configuratorName",
+        type: String,
+        description: "The name of the configurator used for the simulation set",
+        example: "C1BaseConfigurator"
+    })
+    configuratorName: string;
 
     @IsIn(["running", "pending", "completed", "failed"])
     @ApiProperty({
@@ -86,6 +96,27 @@ export class SimSetDTOGet implements SimSetDTO {
         required: false
     })
     simConfigParams: SimConfigParamsDTO;
+
+    @IsNumber()
+    @IsOptional()
+    @ApiProperty({
+        name: "currentOptimiserStateId",
+        type: Number,
+        description: "The current optimiser state ID",
+        example: 1,
+        required: false
+    })
+    currentOptimiserStateId: number | null;
+
+    @IsArray()
+    @IsOptional()
+    @ApiProperty({
+        name: "currentConvergenceTestIds",
+        type: "array",
+        description: "The current convergence test IDs",
+        required: false
+    })
+    currentConvergenceTestIds: number[];
 }
 
 export class SimSetDTOCreate extends PickType(SimSetDTOGet, [
@@ -93,6 +124,7 @@ export class SimSetDTOCreate extends PickType(SimSetDTOGet, [
     "modelName",
     "modelParams",
     "optimiserName",
+    "configuratorName",
     "simConfigParams"
 ]) {
     @IsOptional()
@@ -103,6 +135,9 @@ export class SimSetDTOCreate extends PickType(SimSetDTOGet, [
 
     @IsOptional()
     optimiserName: string;
+
+    @IsOptional()
+    configuratorName: string;
 
     @IsOptional()
     simConfigParams: SimConfigParamsDTO;

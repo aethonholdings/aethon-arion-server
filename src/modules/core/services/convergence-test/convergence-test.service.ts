@@ -117,7 +117,6 @@ export class ConvergenceTestService {
         let stdDevSumTmp: number = 0;
         convergenceTest.resultCount = 0;
         convergenceTest.dispatchedRuns = 0;
-        convergenceTest.processingTimeSec = 0;
         convergenceTest.completedSimConfigCount = 0;
         convergenceTest.simConfigCount = convergenceTest.simConfigs.length;
         convergenceTest.orgConfigCount = convergenceTest.simConfigCount;
@@ -134,7 +133,6 @@ export class ConvergenceTestService {
             convergenceTest.orgConfigCount;
             convergenceTest.resultCount += simConfig.runCount;
             convergenceTest.dispatchedRuns += simConfig.dispatchedRuns;
-            convergenceTest.processingTimeSec += simConfig.durationSec;
             avgSumTmp += simConfig.avgPerformance;
             stdDevSumTmp += simConfig.stdDevPerformance;
         }

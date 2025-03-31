@@ -74,7 +74,7 @@ export class OptimiserService {
             // check if the configuratorParams instance exists
             let id: number = (
                 await this.configuratorParamsService.findOne({
-                    configParams: configParam.configuratorParamData
+                    configParams: configParam.configuratorParams.configuratorParamData
                 })
             )?.id;
             // for each configuratorParams, check whether it exists and is completed
@@ -83,7 +83,7 @@ export class OptimiserService {
                 const configuratorParamsDTO: ConfiguratorParamsDTO<ConfiguratorParams> =
                     await this.configuratorParamsService.create(
                         model,
-                        configParam.configuratorParamData,
+                        configParam.configuratorParams.configuratorParamData,
                         model.getDefaultConfigurator().name,
                         configParam.multipleOrgConfigs
                     );

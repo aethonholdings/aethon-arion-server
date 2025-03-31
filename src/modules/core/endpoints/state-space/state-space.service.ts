@@ -13,9 +13,6 @@ export class StateSpaceService {
             .find({
                 where: { resultId: resultId },
                 order: { clockTick: "ASC" }
-            })
-            .then((stateSpacePoints: StateSpacePoint[]) => {
-                return stateSpacePoints.map((stateSpacePoint) => stateSpacePoint.toDTO());
             });
     }
 }
