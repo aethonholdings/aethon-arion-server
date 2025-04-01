@@ -53,8 +53,8 @@ export class OrgConfigController {
         type: OrgConfigDTOGet,
         description: "The newly created OrgConfig object"
     })
-    create(@Body() configuratorParamsDTO: ConfiguratorParamsDTOCreate): Promise<OrgConfigDTOGet> {
-        return this.orgConfigService.create(configuratorParamsDTO) as Promise<OrgConfigDTOGet>;
+    create(@Body() configuratorParamsDTO: ConfiguratorParamsDTOCreate): Promise<OrgConfigDTOGet | OrgConfigDTOGet[]> {
+        return this.orgConfigService.create(configuratorParamsDTO) as Promise<OrgConfigDTOGet | OrgConfigDTOGet[]>;
     }
 
     // endpoint that deletes an OrgConfig by ID

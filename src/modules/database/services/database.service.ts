@@ -46,6 +46,11 @@ export class DatabaseService {
                 console.log(err);
             }
         }
+        try {
+            await this.dataSource.query(`TRUNCATE optimiser_state_convergence_tests_convergence_test;`);
+        } catch (err) {
+            console.log(err);
+        }
         await this.dataSource.query(`SET FOREIGN_KEY_CHECKS = 1;`);
     }
 }

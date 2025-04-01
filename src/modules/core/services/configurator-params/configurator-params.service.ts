@@ -1,14 +1,19 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { ConfiguratorParams } from "aethon-arion-db";
 import {
+    Configurator,
     ConfiguratorParamData,
     ConfiguratorParamsDTO,
     Model,
     ObjectHash,
     OptimiserData,
-    OptimiserParameters
+    OptimiserParameters,
+    OptimiserStateDTO
 } from "aethon-arion-pipeline";
-import { DataSource } from "typeorm";
+import environment from "env/environment";
+import { ServerEnvironment } from "src/common/types/server.types";
+import { DataSource, EntityManager, In } from "typeorm";
+import { ModelService } from "../model/model.service";
 
 type Where =
     | { id: number; configParams?: never; hash?: never }
@@ -17,22 +22,70 @@ type Where =
 
 @Injectable()
 export class ConfiguratorParamsService {
-    constructor(private dataSource: DataSource) {}
+    private _dev: boolean = false;
+    private _logger: Logger = new Logger(ConfiguratorParamsService.name);
+    private _env: ServerEnvironment = environment();
+
+    constructor(
+        private dataSource: DataSource,
+        private modelService: ModelService
+    ) {
+        this._dev = this._env.root.dev;
+    }
 
     async create(
-        model: Model<ConfiguratorParamData, OptimiserParameters, OptimiserData>,
-        configuratorParamData: ConfiguratorParamData,
+        modelName: string,
         configuratorName: string,
-        multipleOrgConfigs: boolean
-    ): Promise<ConfiguratorParamsDTO<ConfiguratorParamData>> {
+        configuratorParamsDTOs:
+            | ConfiguratorParamsDTO<ConfiguratorParamData>
+            | ConfiguratorParamsDTO<ConfiguratorParamData>[],
+        tEntityManager?: EntityManager
+    ): Promise<ConfiguratorParams[]> {
+        if (!tEntityManager) tEntityManager = this.dataSource.createEntityManager();
+        const model: Model<ConfiguratorParamData, OptimiserParameters, OptimiserData> =
+            this.modelService.getModel(modelName);
+        const configurator: Configurator<ConfiguratorParamData, OptimiserParameters, OptimiserData> =
+            model.getConfigurator(configuratorName);
+        if (!Array.isArray(configuratorParamsDTOs)) configuratorParamsDTOs = [configuratorParamsDTOs];
+
         // create a new configurator params
-        return this.dataSource.getRepository(ConfiguratorParams).save({
-            modelName: model.name,
-            configuratorName: configuratorName,
-            data: configuratorParamData,
-            hash: new ObjectHash(configuratorParamData).toString(),
-            multipleOrgConfigs: multipleOrgConfigs
-        });
+        // ****** CONFIGURATOR PARAMS
+        // assess the configurator params required in the current optimiser state
+        // find whether they correspond to existing configurator params
+        // if not, create them
+
+        // first get what configuratorParams are required by the optimiser step
+        if (this._dev) this._logger.log(`Creating required ConfiguratorParams`);
+        const requiredHashes: string[] = configuratorParamsDTOs.map((param) => param.hash);
+        // fetch the configurator params already in the database against the hashes required
+        // by the optimiser state
+        return tEntityManager
+            .getRepository(ConfiguratorParams)
+            .find({ where: { hash: In(requiredHashes) } })
+            .then(async (configuratorParams: ConfiguratorParams[]) => {
+                let configuratorParamsNew: ConfiguratorParams[] = [];
+                for (let configuratorParam of configuratorParamsDTOs) {
+                    // check if a ConfiguratorParam entity was found in the database with the same hash
+                    // as the required ConfiguratorParam
+                    if (!configuratorParams.find((foundParam) => foundParam.hash === configuratorParam.hash)) {
+                        // the ConfiguratorParam hash was not found in the database, create a configurator param
+                        let configuratorParamsTmp = {
+                            ...configuratorParam,
+                            modelName: model.name,
+                            configuratorName: configuratorName
+                        } as ConfiguratorParams;
+                        configuratorParamsNew.push(configuratorParamsTmp);
+                    }
+                }
+                configuratorParams.push(
+                    ...(await tEntityManager.getRepository(ConfiguratorParams).save(configuratorParamsNew))
+                );
+                return configuratorParams;
+            })
+            .then((configuratorParams) => {
+                if (this._dev) this._logger.log(`ConfiguratorParams created`);
+                return configuratorParams;
+            });
     }
 
     async findOne(where: Where): Promise<ConfiguratorParamsDTO<ConfiguratorParamData>> {

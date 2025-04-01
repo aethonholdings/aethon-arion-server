@@ -1,7 +1,14 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { DataSource, Repository } from "typeorm";
+import { DataSource, EntityManager, Repository } from "typeorm";
 import { ConvergenceTest, Result, SimConfig } from "aethon-arion-db";
-import { RandomStreamType, ResultDTO, SimConfigDTO, States } from "aethon-arion-pipeline";
+import {
+    ConvergenceTestDTO,
+    OrgConfigDTO,
+    ResultDTO,
+    SimConfigDTO,
+    SimConfigParamsDTO,
+    States
+} from "aethon-arion-pipeline";
 import { ModelService } from "../../services/model/model.service";
 import environment from "../../../../../env/environment";
 import { Paginated, Paginator } from "aethon-nestjs-paginate";
@@ -10,8 +17,6 @@ import { Paginated, Paginator } from "aethon-nestjs-paginate";
 export class SimConfigService {
     private _logger: Logger = new Logger(SimConfigService.name);
     private _dev: boolean = false;
-    private _randomStreamType: RandomStreamType = "random"; // toDo: type to RandomStreamType
-    private _simulationDays = 100;
 
     constructor(
         private dataSource: DataSource,
@@ -19,8 +24,6 @@ export class SimConfigService {
     ) {
         const env = environment();
         this._dev = env.root.dev;
-        this._randomStreamType = env.options.randomStreamType;
-        this._simulationDays = env.options.simulationDays;
     }
 
     next(nodeId: string): Promise<SimConfigDTO> {
@@ -37,7 +40,7 @@ export class SimConfigService {
                 where: { converged: false },
                 order: { convergenceTestId: "ASC", id: "ASC" }
             })
-            .then(async (simConfig) => {
+            .then((simConfig) => {
                 if (simConfig !== null) {
                     if (this._dev) this._logger.log("Next simconfig fetched");
                     if (simConfig.dispatchedRuns === 0) simConfig.start = new Date();
@@ -48,12 +51,16 @@ export class SimConfigService {
                         this._logger.log("SimConfig updated");
                         this._logger.log("Updating convergence test");
                     }
-                    await this.dataSource.getRepository(ConvergenceTest).update(simConfig.convergenceTest.id, {
-                        dispatchedRuns: simConfig.convergenceTest.dispatchedRuns + 1,
-                        state: States.RUNNING
-                    });
-                    if (this._dev) this._logger.log("Convergence test updated");
-                    return simConfig.save();
+                    return this.dataSource
+                        .getRepository(ConvergenceTest)
+                        .update(simConfig.convergenceTest.id, {
+                            dispatchedRuns: simConfig.convergenceTest.dispatchedRuns + 1,
+                            state: States.RUNNING
+                        })
+                        .then(() => {
+                            if (this._dev) this._logger.log("Convergence test updated");
+                            return simConfig.save();
+                        });
                 }
             });
     }
@@ -95,33 +102,29 @@ export class SimConfigService {
             });
     }
 
-    async create(
-        orgConfigId: number,
-        convergenceTestId: number,
-        randomStreamType?: RandomStreamType,
-        days?: number
-    ): Promise<SimConfigDTO> {
-        const convergenceTest = await this.dataSource
-            .getRepository(ConvergenceTest)
-            .findOneOrFail({ where: { id: convergenceTestId }, relations: ["simConfigParams"] });
-        const simConfigParamsId = convergenceTest.simConfigParams.id;
-        if (orgConfigId && convergenceTestId) {
-            return this.dataSource.getRepository(SimConfig).save({
-                orgConfigId: orgConfigId,
-                runCount: 0,
-                dispatchedRuns: 0,
-                randomStreamType: randomStreamType ? randomStreamType : this._randomStreamType,
-                days: days ? days : this._simulationDays,
-                converged: false,
-                running: false,
-                saveStateSpace: false,
+    create(
+        simConfigParamsDTO: SimConfigParamsDTO,
+        orgConfigDTO: OrgConfigDTO,
+        convergenceTestDTO: ConvergenceTestDTO,
+        tEntityManager?: EntityManager
+    ): Promise<SimConfig> {
+        // ****** SIM CONFIGS
+        // generate the sim configs required for each convergence test
+        if (this._dev) this._logger.log(`Creating sim configs`);
+        if (!tEntityManager) tEntityManager = this.dataSource.createEntityManager();
+        return tEntityManager
+            .getRepository(SimConfig)
+            .save({
+                orgConfig: orgConfigDTO,
                 state: States.PENDING,
-                simConfigParamsId: simConfigParamsId,
-                convergenceTestId: convergenceTestId
-            });
-        } else {
-            throw new Error("Incompatible model signature with SimSet");
-        }
+                results: [],
+                simConfigParams: simConfigParamsDTO,
+                convergenceTest: convergenceTestDTO,
+                dispatchedRuns: 0,
+                runCount: 0,
+                days: simConfigParamsDTO.days,
+                randomStreamType: simConfigParamsDTO.randomStreamType
+            })
     }
 
     delete(id: number): Promise<number> {
