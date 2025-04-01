@@ -32,7 +32,7 @@ export class SimSetService {
     }
 
     async onApplicationBootstrap() {
-        // await this.touch();
+        await this.touch();
     }
 
     findAll(query: any): Promise<SimSetDTO[]> {
@@ -121,7 +121,7 @@ export class SimSetService {
             relations: { optimiserStates: { simSet: { simConfigParams: true } }, simConfigParams: true }
         });
         for (let simSet of simSets) {
-            // await this.touchSimSet(simSet);
+            await this.optimiserService.touch(simSet.currentOptimiserStateId);
         }
     }
 

@@ -1,12 +1,11 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { DataSource, Repository } from "typeorm";
-import { ConvergenceTest, Result, SimConfig, StateSpacePoint } from "aethon-arion-db";
-import { Utils, ResultDTO, States, SimConfigDTO, OptimiserStateDTO } from "aethon-arion-pipeline";
+import { Result, SimConfig, StateSpacePoint } from "aethon-arion-db";
+import { Utils, ResultDTO, States, SimConfigDTO } from "aethon-arion-pipeline";
 import { ModelService } from "../../services/model/model.service";
 import environment from "../../../../../env/environment";
 import { Paginated, Paginator } from "aethon-nestjs-paginate";
 import { ConvergenceTestService } from "../../services/convergence-test/convergence-test.service";
-import { OptimiserService } from "../../services/optimiser/optimiser.service";
 
 type SimConfigUpdate = Partial<
     Pick<
@@ -25,7 +24,6 @@ export class ResultService {
     constructor(
         private dataSource: DataSource,
         private convergenceTestService: ConvergenceTestService,
-        private optimiserService: OptimiserService,
         private modelService: ModelService
     ) {
         const env = environment();
@@ -39,7 +37,7 @@ export class ResultService {
         let result: Result;
         return this.dataSource.transaction(async (tEntityManager) => {
             // find the simConfig
-            return await tEntityManager
+            return tEntityManager
                 .getRepository(SimConfig)
                 .findOneOrFail({
                     where: { id: resultDto.simConfigId },
@@ -123,18 +121,9 @@ export class ResultService {
                 })
                 .then(() => {
                     // touch all upstream objects and update their statistics
+                    // through the convergence test
                     // ********* CONVERGENCE TEST
-                    return this.convergenceTestService.touch(simConfig.convergenceTest, tEntityManager);
-                })
-                .then((convergenceTest: ConvergenceTest) => {
-                    // ******** OPTIMISER STEP
-                    let promises: Promise<OptimiserStateDTO<ConvergenceTest>>[] = [];
-                    if (convergenceTest.state === States.COMPLETED) {
-                        for (let optimiserState of simConfig.convergenceTest.optimiserStates) {
-                            promises.push(this.optimiserService.touch(optimiserState.id, tEntityManager));
-                        }
-                    }
-                    return Promise.all(promises);
+                    return this.convergenceTestService.touch(simConfig.convergenceTest.id, tEntityManager);
                 })
                 .then(() => {
                     if (this._dev) this._logger.log("Convergence test saved");

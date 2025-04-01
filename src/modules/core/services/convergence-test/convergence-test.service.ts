@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { forwardRef, Inject, Injectable, Logger } from "@nestjs/common";
 import { DataSource, EntityManager, In } from "typeorm";
 import { ConvergenceTest, OrgConfig, SimConfig } from "aethon-arion-db";
 import {
@@ -14,6 +14,7 @@ import environment from "env/environment";
 import { OrgConfigService } from "../../endpoints/org-config/org-config.service";
 import { SimConfigService } from "../../endpoints/sim-config/sim-config.service";
 import { ModelService } from "../model/model.service";
+import { OptimiserService } from "../optimiser/optimiser.service";
 
 type ConvergenceTestUpdate = Partial<
     Pick<
@@ -35,16 +36,17 @@ export class ConvergenceTestService {
     private _logger: Logger = new Logger(ConvergenceTestService.name);
     private _dev: boolean = false;
     private _env: ServerEnvironment = environment();
-    private _convergenceMargin: number = 0.01;
+    private _convergenceMargin: number;
 
     constructor(
         private dataSource: DataSource,
         private modelService: ModelService,
         private orgConfigService: OrgConfigService,
-        private simConfigService: SimConfigService
+        @Inject(forwardRef(() => SimConfigService)) private simConfigService: SimConfigService,
+        private optimiserService: OptimiserService
     ) {
         this._dev = this._env.root.dev;
-        this._convergenceMargin = this._env.options.convergenceMargin;
+        this._convergenceMargin = this._env.options.convergenceMargin || 0.01;
     }
 
     create(
@@ -129,88 +131,106 @@ export class ConvergenceTestService {
             });
     }
 
-    async touch(convergenceTest: ConvergenceTestDTO, tEntityManager?: EntityManager): Promise<ConvergenceTest> {
+    async touch(convergenceTestId: number, tEntityManager?: EntityManager): Promise<ConvergenceTest> {
         if (!tEntityManager) tEntityManager = this.dataSource.createEntityManager();
-        const simConfigSet = await tEntityManager
-            .getRepository(SimConfig)
-            .createQueryBuilder("simConfig")
-            .select("AVG(simConfig.avgPerformance)", "avgPerformance")
-            .addSelect("STDDEV(simConfig.avgPerformance)", "stdDevPerformance")
-            .addSelect("COUNT(simConfig.id)", "simConfigCount")
-            .addSelect("COUNT(DISTINCT simConfig.orgConfigId)", "orgConfigCount")
-            .addSelect(`SUM(IF(simConfig.state = "${States.COMPLETED}", 1, 0))`, "completedSimConfigCount")
-            .addSelect("SUM(simConfig.runCount)", "resultCount")
-            .addSelect("SUM(simConfig.dispatchedRuns)", "dispatchedRuns")
-            .where("simConfig.convergenceTestId = :convergenceTestId", {
-                convergenceTestId: convergenceTest.id
-            })
-            .groupBy("simConfig.convergenceTestId")
-            .getRawOne();
-        let update: ConvergenceTestUpdate = {
-            resultCount: simConfigSet.resultCount,
-            dispatchedRuns: simConfigSet.dispatchedRuns,
-            avgPerformance: simConfigSet.avgPerformance,
-            stdDevPerformance: simConfigSet.stdDevPerformance ? simConfigSet.stdDevPerformance : 0,
-            completedSimConfigCount: simConfigSet.completedSimConfigCount,
-            orgConfigCount: simConfigSet.orgConfigCount,
-            simConfigCount: simConfigSet.simConfigCount
-        };
-        // check for convergence
-        let converged: boolean = false;
-        if (update.completedSimConfigCount === update.simConfigCount) {
-            if (this._dev) this._logger.log("Checking ConvergenceTest convergence");
-            if (convergenceTest.stdDevPerformance > 0 && convergenceTest.configuratorParams.multipleOrgConfigs) {
-                const percentChange = Math.abs(
-                    (convergenceTest.stdDevPerformance - simConfigSet.stdDevPerformance) /
-                        convergenceTest.stdDevPerformance
-                );
-                converged = percentChange < this._convergenceMargin ? true : false;
-                if (!converged) {
-                    if (this._dev) {
-                        this._logger.log("Convergence test not converged and requires more simConfig generation");
-                        this._logger.log("Creating new OrgConfig and SimConfig");
-                        const configuratorParams = convergenceTest.configuratorParams;
-                        const model = this.modelService.getModel(configuratorParams.modelName);
-                        const configuratorName = configuratorParams.configuratorName;
-                        let newOrgConfig: OrgConfig = await tEntityManager.getRepository(OrgConfig).save({
-                            ...model.getConfigurator(configuratorName).generate(configuratorParams),
-                            simConfigs: [],
-                            configuratorName: configuratorName,
-                            configuratorParams: configuratorParams,
-                            type: model.name
-                        });
-                        update.orgConfigCount++;
-                        await tEntityManager.getRepository(SimConfig).save({
-                            orgConfig: newOrgConfig,
-                            convergenceTest: convergenceTest,
-                            state: States.PENDING,
-                            runCount: 0,
-                            dispatchedRuns: 0,
-                            simConfigParams: convergenceTest.simConfigParams,
-                            days: convergenceTest.simConfigParams.days,
-                            randomStreamType: convergenceTest.simConfigParams.randomStreamType
-                        });
-                        update.simConfigCount++;
-                    }
+        return tEntityManager
+            .getRepository(ConvergenceTest)
+            .findOneOrFail({
+                where: { id: convergenceTestId },
+                relations: {
+                    configuratorParams: true,
+                    simConfigParams: true,
+                    optimiserStates: true
                 }
-            } else {
-                converged = true;
-            }
-        }
-        if (converged) {
-            if (this._dev) this._logger.log("Convergence test converged");
-            update.state = States.COMPLETED;
-            update.converged = true;
-        }
-        if (this._dev) this._logger.log("Saving convergence test");
-        await tEntityManager.getRepository(ConvergenceTest).update(convergenceTest.id, update);
-        return tEntityManager.getRepository(ConvergenceTest).findOne({
-            where: { id: convergenceTest.id },
-            relations: {
-                configuratorParams: true,
-                simConfigParams: true,
-                optimiserStates: true
-            }
-        });
+            })
+            .then((convergenceTest: ConvergenceTest) => {
+                return tEntityManager
+                    .getRepository(SimConfig)
+                    .createQueryBuilder("simConfig")
+                    .select("AVG(simConfig.avgPerformance)", "avgPerformance")
+                    .addSelect("STDDEV(simConfig.avgPerformance)", "stdDevPerformance")
+                    .addSelect("COUNT(simConfig.id)", "simConfigCount")
+                    .addSelect("COUNT(DISTINCT simConfig.orgConfigId)", "orgConfigCount")
+                    .addSelect(`SUM(IF(simConfig.state = "${States.COMPLETED}", 1, 0))`, "completedSimConfigCount")
+                    .addSelect("SUM(simConfig.runCount)", "resultCount")
+                    .addSelect("SUM(simConfig.dispatchedRuns)", "dispatchedRuns")
+                    .where("simConfig.convergenceTestId = :convergenceTestId", {
+                        convergenceTestId: convergenceTestId
+                    })
+                    .groupBy("simConfig.convergenceTestId")
+                    .getRawOne()
+                    .then(async (simConfigSet) => {
+                        let update: ConvergenceTestUpdate = {
+                            ...simConfigSet,
+                            stdDevPerformance: simConfigSet.stdDevPerformance ? simConfigSet.stdDevPerformance : 0
+                        };
+                        // check for convergence
+                        let converged: boolean = false;
+                        if (update.completedSimConfigCount === update.simConfigCount) {
+                            if (this._dev) this._logger.log("Checking ConvergenceTest convergence");
+                            if (
+                                convergenceTest.stdDevPerformance > 0 &&
+                                convergenceTest.configuratorParams.multipleOrgConfigs
+                            ) {
+                                const percentChange = Math.abs(
+                                    (convergenceTest.stdDevPerformance - simConfigSet.stdDevPerformance) /
+                                        convergenceTest.stdDevPerformance
+                                );
+                                converged = percentChange < this._convergenceMargin ? true : false;
+                                if (!converged) {
+                                    if (this._dev) {
+                                        this._logger.log(
+                                            "Convergence test not converged and requires more simConfig generation"
+                                        );
+                                        this._logger.log("Creating new OrgConfig and SimConfig");
+                                        const configuratorParams = convergenceTest.configuratorParams;
+                                        const model = this.modelService.getModel(configuratorParams.modelName);
+                                        const configuratorName = configuratorParams.configuratorName;
+                                        let newOrgConfig: OrgConfig = await tEntityManager
+                                            .getRepository(OrgConfig)
+                                            .save({
+                                                ...model.getConfigurator(configuratorName).generate(configuratorParams),
+                                                simConfigs: [],
+                                                configuratorName: configuratorName,
+                                                configuratorParams: configuratorParams,
+                                                type: model.name
+                                            });
+                                        update.orgConfigCount++;
+                                        await tEntityManager.getRepository(SimConfig).save({
+                                            orgConfig: newOrgConfig,
+                                            convergenceTest: convergenceTest,
+                                            state: States.PENDING,
+                                            runCount: 0,
+                                            dispatchedRuns: 0,
+                                            simConfigParams: convergenceTest.simConfigParams,
+                                            days: convergenceTest.simConfigParams.days,
+                                            randomStreamType: convergenceTest.simConfigParams.randomStreamType
+                                        });
+                                        update.simConfigCount++;
+                                    }
+                                }
+                            } else {
+                                converged = true;
+                            }
+                        }
+                        if (converged) {
+                            if (this._dev) this._logger.log("Convergence test converged");
+                            update.state = States.COMPLETED;
+                            update.converged = true;
+                        } else if (update.resultCount > 0) {
+                            update.state = States.RUNNING;
+                        }
+                        if (this._dev) this._logger.log("Saving convergence test");
+                        await tEntityManager.getRepository(ConvergenceTest).update(convergenceTest.id, update);
+                        return convergenceTest;
+                    })
+                    .then(async (convergenceTest: ConvergenceTest) => {
+                        // ******** OPTIMISER STEP
+                        for (let optimiserState of convergenceTest.optimiserStates) {
+                            await this.optimiserService.touch(optimiserState.id, tEntityManager);
+                        }
+                        return convergenceTest;
+                    });
+            });
     }
 }

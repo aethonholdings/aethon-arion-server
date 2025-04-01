@@ -12,6 +12,7 @@ import {
 import { ModelService } from "../../services/model/model.service";
 import environment from "../../../../../env/environment";
 import { Paginated, Paginator } from "aethon-nestjs-paginate";
+import { ConvergenceTestService } from "../../services/convergence-test/convergence-test.service";
 
 @Injectable()
 export class SimConfigService {
@@ -20,6 +21,7 @@ export class SimConfigService {
 
     constructor(
         private dataSource: DataSource,
+        private convergenceTestService: ConvergenceTestService,
         private modelService: ModelService
     ) {
         const env = environment();
@@ -28,6 +30,7 @@ export class SimConfigService {
 
     next(nodeId: string): Promise<SimConfigDTO> {
         this._logger.log(`Next simconfig requested by node ${nodeId}`);
+
         return this.dataSource
             .getRepository(SimConfig)
             .findOne({
@@ -46,22 +49,13 @@ export class SimConfigService {
                     if (simConfig.dispatchedRuns === 0) simConfig.start = new Date();
                     simConfig.dispatchedRuns++;
                     simConfig.state = States.RUNNING;
-
-                    if (this._dev) {
-                        this._logger.log("SimConfig updated");
-                        this._logger.log("Updating convergence test");
-                    }
-                    return this.dataSource
-                        .getRepository(ConvergenceTest)
-                        .update(simConfig.convergenceTest.id, {
-                            dispatchedRuns: simConfig.convergenceTest.dispatchedRuns + 1,
-                            state: States.RUNNING
-                        })
-                        .then(() => {
-                            if (this._dev) this._logger.log("Convergence test updated");
-                            return simConfig.save();
-                        });
                 }
+                return this.dataSource.getRepository(SimConfig).save(simConfig);
+            })
+            .then((simConfig) => {
+                if (this._dev) this._logger.log("SimConfig updated");
+                this.convergenceTestService.touch(simConfig.convergenceTest.id);
+                return simConfig;
             });
     }
 
@@ -128,9 +122,7 @@ export class SimConfigService {
                 randomStreamType: simConfigParamsDTO.randomStreamType
             });
         }
-        throw new Error(
-            `Inconsistent simConfigParams or orgConfigParams with convergenceTest in OrgConfig generation`
-        );
+        throw new Error(`Inconsistent simConfigParams or orgConfigParams with convergenceTest in OrgConfig generation`);
     }
 
     delete(id: number): Promise<number> {
