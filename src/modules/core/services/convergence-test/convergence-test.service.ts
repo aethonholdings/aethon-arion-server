@@ -157,7 +157,7 @@ export class ConvergenceTestService {
         };
         // check for convergence
         let converged: boolean = false;
-        if (simConfigSet.completedSimConfigCount === simConfigSet.simConfigCount) {
+        if (update.completedSimConfigCount === update.simConfigCount) {
             if (this._dev) this._logger.log("Checking ConvergenceTest convergence");
             if (convergenceTest.stdDevPerformance > 0 && convergenceTest.configuratorParams.multipleOrgConfigs) {
                 const percentChange = Math.abs(

@@ -1,11 +1,12 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { DataSource, In, Repository } from "typeorm";
-import { ConvergenceTest, OptimiserState, OrgConfig, Result, SimConfig, StateSpacePoint } from "aethon-arion-db";
-import { Utils, ResultDTO, States, SimConfigDTO, ConvergenceTestDTO } from "aethon-arion-pipeline";
+import { DataSource, Repository } from "typeorm";
+import { ConvergenceTest, Result, SimConfig, StateSpacePoint } from "aethon-arion-db";
+import { Utils, ResultDTO, States, SimConfigDTO, OptimiserStateDTO } from "aethon-arion-pipeline";
 import { ModelService } from "../../services/model/model.service";
 import environment from "../../../../../env/environment";
 import { Paginated, Paginator } from "aethon-nestjs-paginate";
 import { ConvergenceTestService } from "../../services/convergence-test/convergence-test.service";
+import { OptimiserService } from "../../services/optimiser/optimiser.service";
 
 type SimConfigUpdate = Partial<
     Pick<
@@ -24,6 +25,7 @@ export class ResultService {
     constructor(
         private dataSource: DataSource,
         private convergenceTestService: ConvergenceTestService,
+        private optimiserService: OptimiserService,
         private modelService: ModelService
     ) {
         const env = environment();
@@ -34,6 +36,7 @@ export class ResultService {
 
     async create(resultDto: ResultDTO): Promise<ResultDTO> {
         let simConfig: SimConfig;
+        let result: Result;
         return this.dataSource.transaction(async (tEntityManager) => {
             // find the simConfig
             return await tEntityManager
@@ -51,7 +54,7 @@ export class ResultService {
                         results: true
                     }
                 })
-                .then(async (simConfigTmp: SimConfig) => {
+                .then((simConfigTmp: SimConfig) => {
                     simConfig = simConfigTmp;
                     // ******** RESULT
                     // create the result object
@@ -70,20 +73,23 @@ export class ResultService {
                         simConfig: simConfig
                     });
                 })
-                .then(async (result: Result) => {
+                .then((resultTmp: Result) => {
+                    result = resultTmp;
                     if (this._dev) {
                         this._logger.log(`Result object id:${result.id} created`);
                         this._logger.log("Updating simConfig");
                     }
                     // ******** SIMCONFIG
                     // update the simConfig statistics
-                    const resultSet = await tEntityManager
+                    return tEntityManager
                         .getRepository(Result)
                         .createQueryBuilder("result")
                         .select("AVG(result.performance)", "avgPerformance")
                         .addSelect("STDDEV(result.performance)", "stDevPerformance")
                         .where("result.simConfigId = :simConfigId", { simConfigId: simConfig.id })
                         .getRawOne();
+                })
+                .then((resultSet) => {
                     let update: SimConfigUpdate = {
                         avgPerformance: resultSet.avgPerformance,
                         stdDevPerformance: resultSet.stDevPerformance,
@@ -110,71 +116,27 @@ export class ResultService {
                         update.end = new Date();
                         update.durationSec = (update.end.getTime() - simConfig.start.getTime()) / 1000;
                         update.converged = true;
-                        simConfig.convergenceTest.completedSimConfigCount++;
                     }
 
                     // save the simconfig
-                    await tEntityManager.getRepository(SimConfig).update(simConfig.id, update);
-                    return result;
+                    return tEntityManager.getRepository(SimConfig).update(simConfig.id, update);
                 })
-                .then(async (result: Result) => {
-                    if (this._dev) {
-                        this._logger.log("SimConfig updated");
-                        this._logger.log("Updating convergence test");
-                    }
-                    // ******** CONVERGENCE TEST
-                    this.convergenceTestService.touch(simConfig.convergenceTest);                    
-                    return result;
+                .then(() => {
+                    // touch all upstream objects and update their statistics
+                    // ********* CONVERGENCE TEST
+                    return this.convergenceTestService.touch(simConfig.convergenceTest, tEntityManager);
                 })
-                .then(async (result: Result) => {
+                .then((convergenceTest: ConvergenceTest) => {
                     // ******** OPTIMISER STEP
-                    const optimiserStateIdArray: number[] = simConfig.convergenceTest.optimiserStates.map(
-                        (optimiserState) => optimiserState.id
-                    );
-                    const optimiserStates = await tEntityManager.getRepository(OptimiserState).find({
-                        where: { id: In(optimiserStateIdArray) },
-                        relations: { simSet: true, convergenceTests: true }
-                    });
-                    if (optimiserStates && optimiserStates.length > 0) {
-                        const completedOptimiserStates: OptimiserState[] = [];
-                        if (this._dev) this._logger.log("Updating optimiser states");
-                        for (let optimiserStateTmp of optimiserStates) {
-                            let running: boolean = false;
-                            let completed: boolean = true;
-                            let converged: boolean = false;
-                            for (let convergenceTestTmp of optimiserStateTmp.convergenceTests) {
-                                if (convergenceTestTmp.state === States.RUNNING) running = true;
-                                if (convergenceTestTmp.state !== States.COMPLETED) completed = false;
-                                if (!convergenceTestTmp.converged) converged = false;
-                            }
-                            if (running) {
-                                optimiserStateTmp.status = States.RUNNING;
-                            } else if (completed) {
-                                optimiserStateTmp.status = States.COMPLETED;
-                                optimiserStateTmp.end = new Date();
-                                optimiserStateTmp.durationSec =
-                                    (optimiserStateTmp.end.getTime() - optimiserStateTmp.start.getTime()) / 1000;
-                                optimiserStateTmp.percentComplete = 1;
-                                completedOptimiserStates.push(optimiserStateTmp);
-                            } else {
-                                optimiserStateTmp.status = States.PENDING;
-                            }
-                            optimiserStateTmp.converged = converged;
-                        }
-                        await tEntityManager.getRepository(OptimiserState).save(optimiserStates);
-                        if (this._dev) this._logger.log("Optimiser states updated");
-                        if(completedOptimiserStates.length > 0) {
-                            if (this._dev) this._logger.log("Stepping completed optimisers");
-                            for(let completedOptimiserState of completedOptimiserStates) {
-                                let modelTmp = this.modelService.getModel(completedOptimiserState.modelName);
-                                let optimiserTmp = modelTmp.getOptimiser(completedOptimiserState.optimiserName);
-                                let newState = optimiserTmp.step(completedOptimiserState);
-                            }
+                    let promises: Promise<OptimiserStateDTO<ConvergenceTest>>[] = [];
+                    if (convergenceTest.state === States.COMPLETED) {
+                        for (let optimiserState of simConfig.convergenceTest.optimiserStates) {
+                            promises.push(this.optimiserService.touch(optimiserState.id, tEntityManager));
                         }
                     }
-                    return result;
+                    return Promise.all(promises);
                 })
-                .then(async (result: Result) => {
+                .then(() => {
                     if (this._dev) this._logger.log("Convergence test saved");
                     // save the state space if applicable
                     if (simConfig.saveStateSpace && resultDto.stateSpace && resultDto.stateSpace.length > 0) {
@@ -182,13 +144,12 @@ export class ResultService {
                         resultDto.stateSpace.forEach((stateSpacePointDto) => {
                             stateSpacePointDto.resultId = result.id;
                         });
-                        await this.dataSource
-                            .getRepository(StateSpacePoint)
-                            .save(resultDto.stateSpace)
-                            .then(() => {
-                                if (this._dev) this._logger.log("State space saved");
-                            });
+                        return this.dataSource.getRepository(StateSpacePoint).save(resultDto.stateSpace);
                     }
+                    return Promise.resolve(null);
+                })
+                .then((stateSpace) => {
+                    if (this._dev && stateSpace) this._logger.log("State space saved");
                     if (this._dev) this._logger.log("Result " + result.id + " successfully created");
                     return result;
                 });

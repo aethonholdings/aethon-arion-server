@@ -6,7 +6,6 @@ import {
     Optimiser,
     OptimiserData,
     OptimiserParameters,
-    RandomStreamType,
     SimSetDTO,
     States
 } from "aethon-arion-pipeline";
@@ -47,7 +46,7 @@ export class SimSetService {
         });
     }
 
-    async create(simSetDTO: SimSetDTOCreate): Promise<SimSetDTO> {
+    create(simSetDTO: SimSetDTOCreate): Promise<SimSetDTO> {
         const model: Model<ConfiguratorParamData, OptimiserParameters, OptimiserData> = this.modelService.getModel(
             simSetDTO.modelName
         );
@@ -101,7 +100,7 @@ export class SimSetService {
                     })
                     .then(async (simSet: SimSet) => {
                         if (this._dev) this._logger.log(`Sim set ${simSet.id} created`);
-                        await this.optimiserService.createState(simSet, tEntityManager);
+                        await this.optimiserService.create(null, simSet, tEntityManager);
                         return simSet;
                     });
             });

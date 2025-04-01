@@ -49,7 +49,7 @@ export class OrgConfigService {
                     }
                 }
             })
-            .then(async (orgConfigs: OrgConfig[]) => {
+            .then((orgConfigs: OrgConfig[]) => {
                 // check if the required number of orgConfigs paired with a simConfig exist
                 let orgConfigCountMin: number = 1;
                 if (configuratorParamsDTO.multipleOrgConfigs) orgConfigCountMin = this._env.options.minRuns;
@@ -57,15 +57,15 @@ export class OrgConfigService {
                     (orgConfig) => orgConfig.configuratorParams.id === configuratorParamsDTO.id
                 ).length;
 
-                const newOrgConfigs: OrgConfig[] = [];
+                const promises: Promise<OrgConfigDTO>[] = [];
                 if (existingOrgConfigCount < orgConfigCountMin) {
                     const model = this.modelService.getModel(configuratorParamsDTO.modelName);
                     const configuratorName =
                         configuratorParamsDTO.configuratorName || model.getDefaultConfigurator().name;
                     // create the required number of orgConfigs
                     for (let i = 0; i < orgConfigCountMin - existingOrgConfigCount; i++) {
-                        newOrgConfigs.push(
-                            await tEntityManager.getRepository(OrgConfig).save({
+                        promises.push(
+                            tEntityManager.getRepository(OrgConfig).save({
                                 ...model.getConfigurator(configuratorName).generate(configuratorParamsDTO),
                                 simConfigs: [],
                                 configuratorParams: configuratorParamsDTO,
@@ -74,11 +74,10 @@ export class OrgConfigService {
                         );
                     }
                 }
-                return [...orgConfigs, ...newOrgConfigs];
-            })
-            .then((orgConfigs: OrgConfig[]) => {
-                if (this._dev) this._logger.log(`OrgConfigs created`);
-                return orgConfigs;
+                return Promise.all(promises).then((newOrgConfigs: OrgConfig[]) => {
+                    if (this._dev) this._logger.log(`OrgConfigs created`);
+                    return [...orgConfigs, ...newOrgConfigs];
+                });
             });
     }
 

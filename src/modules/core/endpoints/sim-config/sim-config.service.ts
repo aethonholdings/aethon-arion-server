@@ -112,9 +112,11 @@ export class SimConfigService {
         // generate the sim configs required for each convergence test
         if (this._dev) this._logger.log(`Creating sim configs`);
         if (!tEntityManager) tEntityManager = this.dataSource.createEntityManager();
-        return tEntityManager
-            .getRepository(SimConfig)
-            .save({
+        if (
+            simConfigParamsDTO.id === convergenceTestDTO.simConfigParams.id &&
+            convergenceTestDTO.configuratorParams.id === orgConfigDTO.configuratorParams.id
+        ) {
+            return tEntityManager.getRepository(SimConfig).save({
                 orgConfig: orgConfigDTO,
                 state: States.PENDING,
                 results: [],
@@ -124,7 +126,11 @@ export class SimConfigService {
                 runCount: 0,
                 days: simConfigParamsDTO.days,
                 randomStreamType: simConfigParamsDTO.randomStreamType
-            })
+            });
+        }
+        throw new Error(
+            `Inconsistent simConfigParams or orgConfigParams with convergenceTest in OrgConfig generation`
+        );
     }
 
     delete(id: number): Promise<number> {
