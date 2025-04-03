@@ -32,7 +32,7 @@ export class SimSetService {
     }
 
     async onApplicationBootstrap() {
-        await this.touch();
+        // await this.touch();
     }
 
     findAll(query: any): Promise<SimSetDTO[]> {
@@ -95,7 +95,8 @@ export class SimSetService {
                             optimiserStates: [],
                             simConfigParams: simConfigParams,
                             currentOptimiserStateId: null,
-                            currentConvergenceTestIds: []
+                            currentConvergenceTestIds: [],
+                            optimiserParameters: optimiser.parameters,
                         });
                     })
                     .then(async (simSet: SimSet) => {

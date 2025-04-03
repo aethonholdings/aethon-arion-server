@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { DataSource, EntityManager, Repository } from "typeorm";
-import { ConvergenceTest, Result, SimConfig } from "aethon-arion-db";
+import { Result, SimConfig } from "aethon-arion-db";
 import {
     ConvergenceTestDTO,
     OrgConfigDTO,
@@ -44,17 +44,20 @@ export class SimConfigService {
                 order: { convergenceTestId: "ASC", id: "ASC" }
             })
             .then((simConfig) => {
-                if (simConfig !== null) {
+                if (simConfig) {
                     if (this._dev) this._logger.log("Next simconfig fetched");
                     if (simConfig.dispatchedRuns === 0) simConfig.start = new Date();
                     simConfig.dispatchedRuns++;
                     simConfig.state = States.RUNNING;
+                    return this.dataSource.getRepository(SimConfig).save(simConfig);
                 }
-                return this.dataSource.getRepository(SimConfig).save(simConfig);
+                return simConfig;
             })
             .then((simConfig) => {
-                if (this._dev) this._logger.log("SimConfig updated");
-                this.convergenceTestService.touch(simConfig.convergenceTest.id);
+                if (simConfig) {
+                    if (this._dev) this._logger.log("SimConfig updated");
+                    this.convergenceTestService.touch(simConfig.convergenceTest.id);
+                }
                 return simConfig;
             });
     }

@@ -51,7 +51,7 @@ export class OptimiserService {
 
         if (!optimiserStateDTO) {
             stepCount = 0;
-            stateData = optimiser.initialise();
+            stateData = optimiser.initialise(simSetDTO);
         } else {
             stateData = optimiserStateDTO;
             stepCount = optimiserStateDTO.stepCount;
@@ -77,21 +77,10 @@ export class OptimiserService {
                         currentOptimiserStateId: optimiserState.id
                     })
                     .then(() => {
-                        if (this._dev) this._logger.log(`Optimiser state created`);
                         return tEntityManager.getRepository(OptimiserState).findOne({
-                            where: {
-                                id: optimiserState.id
-                            },
-                            relations: { simSet: true, convergenceTests: true }
+                            where: { id: optimiserState.id },
+                            relations: { simSet: { simConfigParams: true }, convergenceTests: true }
                         });
-                    });
-            })
-            .then((optimiserState: OptimiserState) => {
-                return tEntityManager
-                    .getRepository(OptimiserState)
-                    .findOne({
-                        where: { id: optimiserState.id },
-                        relations: { simSet: { simConfigParams: true }, convergenceTests: true }
                     });
             })
             .then(async (optimiserState: OptimiserState) => {
@@ -99,13 +88,7 @@ export class OptimiserService {
                 const configuratorParams: ConfiguratorParams[] = await this.configuratorParamsService.create(
                     simSetDTO.modelName,
                     configuratorName,
-                    optimiser.getStateRequiredConfiguratorParams(optimiserState).map((param) => {
-                        return {
-                            data: param.configuratorParams.configuratorParamData,
-                            hash: param.configuratorParams.hash,
-                            multipleOrgConfigs: param.multipleOrgConfigs
-                        } as ConfiguratorParamsDTO<ConfiguratorParamData>;
-                    }),
+                    optimiser.getStateRequiredConfiguratorParams(optimiserState),
                     tEntityManager
                 );
 
@@ -122,6 +105,8 @@ export class OptimiserService {
 
     async touch(optimiserStateId: number, tEntityManager?: EntityManager): Promise<OptimiserState> {
         if (!tEntityManager) tEntityManager = this.dataSource.createEntityManager();
+        let model: Model<ConfiguratorParamData, OptimiserParameters, OptimiserData>;
+        let optimiser: Optimiser<ConfiguratorParamData, OptimiserParameters, OptimiserData>;
 
         if (this._dev) this._logger.log("Updating optimiser states");
         return tEntityManager
@@ -130,17 +115,21 @@ export class OptimiserService {
                 where: {
                     id: optimiserStateId
                 },
-                relations: { simSet: true, convergenceTests: true }
+                relations: { simSet: true, convergenceTests: { configuratorParams: true } }
             })
             .then(async (optimiserState: OptimiserState) => {
+                model = this.modelService.getModel(optimiserState.modelName);
+                optimiser = model.getOptimiser(optimiserState.optimiserName);
                 let running: boolean = false;
                 let completed: boolean = true;
                 let converged: boolean = false;
+
                 for (let convergenceTest of optimiserState.convergenceTests) {
                     if (convergenceTest.state === States.RUNNING) running = true;
                     if (convergenceTest.state !== States.COMPLETED) completed = false;
                     if (!convergenceTest.converged) converged = false;
                 }
+                if (this._dev) this._logger.log(`Updating optimiser state id:${optimiserState.id}`);
                 if (running) {
                     optimiserState.status = States.RUNNING;
                 } else if (completed) {
@@ -152,27 +141,17 @@ export class OptimiserService {
                     optimiserState.status = States.PENDING;
                 }
                 optimiserState.converged = converged;
-                return tEntityManager.getRepository(OptimiserState).save(optimiserState);
+                return tEntityManager
+                    .getRepository(OptimiserState)
+                    .save(optimiser.update(optimiserState, optimiserState.convergenceTests));
             })
-            .then(async (optimiserState: OptimiserState) => {
-                if (this._dev) this._logger.log("Optimiser state updated");
+            .then((optimiserState: OptimiserState) => {
+                if (this._dev) this._logger.log("Stepping completed optimisers");
                 if (optimiserState.status === States.COMPLETED) {
-                    if (this._dev) this._logger.log("Stepping completed optimisers");
-                    return this._step(optimiserState, tEntityManager);
+                    let newState = optimiser.step(optimiserState, optimiserState.convergenceTests);
+                    return this.create(newState, optimiserState.simSet, tEntityManager);
                 }
-                return null;
+                return tEntityManager.getRepository(OptimiserState).save(optimiserState);
             });
-    }
-
-    private _step(optimiserState: OptimiserState, tEntityManager?: EntityManager): Promise<OptimiserState> {
-        if (!tEntityManager) tEntityManager = this.dataSource.createEntityManager();
-        if (this._dev) this._logger.log(`Stepping optimiser state id:${optimiserState.id}`);
-        let modelTmp = this.modelService.getModel(optimiserState.modelName);
-        let optimiser = modelTmp.getOptimiser(optimiserState.optimiserName);
-        let newState = optimiser.step(optimiserState);
-        return this.create(newState, optimiserState.simSet, tEntityManager).then((optimiserState: OptimiserState) => {
-            if (this._dev) this._logger.log(`New optimiser state id:${optimiserState.id} created`);
-            return optimiserState;
-        });
     }
 }
