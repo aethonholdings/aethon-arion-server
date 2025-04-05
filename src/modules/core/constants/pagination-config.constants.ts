@@ -12,3 +12,9 @@ export const resultPaginationConfig: PaginateConfig = {
     limitMax: 100,
     orderBy: [["performance", "DESC"]]
 };
+
+export const simSetPaginationConfig: PaginateConfig = {
+    limit: 100,
+    limitMax: 100,
+    orderBy: [["id", "DESC"]]
+};

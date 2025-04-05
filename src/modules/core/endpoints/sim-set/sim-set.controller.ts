@@ -2,11 +2,6 @@ import { Body, Controller, Delete, Get, Param, Post, Query } from "@nestjs/commo
 import { SimSetService } from "./sim-set.service";
 import { ApiBody, ApiOkResponse, ApiParam, ApiTags } from "@nestjs/swagger";
 import { SimSetDTOCreate, SimSetDTOGet } from "../../../../common/dto/sim-set.dto";
-import { ResultDTOGet } from "../../../../common/dto/result.dto";
-import {
-    resultPaginationConfig,
-} from "src/modules/core/constants/pagination-config.constants";
-import { GetPaginator, Paginated, PaginateQuery } from "aethon-nestjs-paginate";
 
 @Controller("sim-set")
 @ApiTags("SimSet")

@@ -42,7 +42,12 @@ export class SimSetService {
     findOne(id: number): Promise<SimSetDTO> {
         return this.dataSource.getRepository(SimSet).findOneOrFail({
             where: { id: id },
-            relations: { optimiserStates: true, simConfigParams: true }
+            relations: {
+                optimiserStates: {
+                    convergenceTests: true
+                },
+                simConfigParams: true
+            }
         });
     }
 
@@ -88,15 +93,14 @@ export class SimSetService {
                         if (this._dev) this._logger.log(`Creating sim set`);
                         return tEntityManager.getRepository(SimSet).save({
                             ...simSetDTO,
-                            modelParams: model.getParameters(),
+                            optimiserParams: optimiser.parameters,
                             optimiserName: optimiser.name,
                             configuratorName: configuratorName,
                             state: States.PENDING,
                             optimiserStates: [],
                             simConfigParams: simConfigParams,
                             currentOptimiserStateId: null,
-                            currentConvergenceTestIds: [],
-                            optimiserParameters: optimiser.parameters,
+                            currentConvergenceTestIds: []
                         });
                     })
                     .then(async (simSet: SimSet) => {
