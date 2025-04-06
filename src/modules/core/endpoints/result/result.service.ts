@@ -100,7 +100,7 @@ export class ResultService {
                         if (this._dev) this._logger.log("Checking convergence");
                         if (simConfig.stdDevPerformance > 0) {
                             const percentChange = Math.abs(
-                                (simConfig.stdDevPerformance - simConfig.stdDevPerformance) /
+                                (update.stdDevPerformance - simConfig.stdDevPerformance) /
                                     simConfig.stdDevPerformance
                             );
                             converged = percentChange < this._convergenceMargin ? true : false;
