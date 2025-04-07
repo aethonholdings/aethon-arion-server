@@ -111,7 +111,6 @@ export class OptimiserStateService {
                 optimiser = model.getOptimiser(optimiserState.optimiserName);
 
                 if (this._dev) this._logger.log(`Updating optimiser state id:${optimiserState.id}`);
-                console.log(optimiserState.convergenceTests)
                 // run the optimiser update method with the current ConvergenceTest results to get updated values
                 // for the optimiser state parameters
                 let updatedOptimiserState = optimiser.update(

@@ -64,6 +64,7 @@ export class ResultService {
                         configuratorName: simConfig.orgConfig.configuratorParams.configuratorName,
                         configuratorParams: JSON.parse(JSON.stringify(simConfig.orgConfig.configuratorParams)),
                         agentCount: simConfig.orgConfig.agentCount,
+                        type: simConfig.orgConfig.type,
                         priorityIntensity: Utils.modulo(resultDto.priorityTensor),
                         performance: this.modelService
                             .getModel(simConfig.orgConfig.configuratorParams.modelName)
