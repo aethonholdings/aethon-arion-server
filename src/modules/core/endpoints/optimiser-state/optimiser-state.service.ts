@@ -1,5 +1,5 @@
 import { forwardRef, Inject, Injectable, Logger } from "@nestjs/common";
-import { ModelService } from "../model/model.service";
+import { ModelService } from "../../services/model/model.service";
 import { DataSource, EntityManager } from "typeorm";
 import {
     ConfiguratorParamData,
@@ -12,22 +12,20 @@ import {
     States
 } from "aethon-arion-pipeline";
 import { ConfiguratorParams, ConvergenceTest, OptimiserState, SimSet } from "aethon-arion-db";
-import { ConvergenceTestService } from "../convergence-test/convergence-test.service";
-import { ConfiguratorParamsService } from "../configurator-params/configurator-params.service";
+import { ConvergenceTestService } from "../../services/convergence-test/convergence-test.service";
 import { ServerEnvironment } from "src/common/types/server.types";
 import environment from "env/environment";
 
 @Injectable()
-export class OptimiserService {
+export class OptimiserStateService {
     private _dev: boolean = false;
-    private _logger: Logger = new Logger(OptimiserService.name);
+    private _logger: Logger = new Logger(OptimiserStateService.name);
     private _env: ServerEnvironment = environment();
 
     constructor(
         private dataSource: DataSource,
         private modelService: ModelService,
-        @Inject(forwardRef(() => ConvergenceTestService)) private convergenceTestService: ConvergenceTestService,
-        private configuratorParamsService: ConfiguratorParamsService
+        @Inject(forwardRef(() => ConvergenceTestService)) private convergenceTestService: ConvergenceTestService
     ) {
         this._dev = this._env.root.dev;
     }
@@ -38,10 +36,7 @@ export class OptimiserService {
         tEntityManager?: EntityManager
     ): Promise<OptimiserState> {
         if (!tEntityManager) tEntityManager = this.dataSource.createEntityManager();
-        const model: Model<ConfiguratorParamData, OptimiserParameters, OptimiserData> = this.modelService.getModel(
-            simSetDTO.modelName
-        );
-        const configuratorName: string = simSetDTO.configuratorName || model.getDefaultConfigurator().name;
+        const model: Model = this.modelService.getModel(simSetDTO.modelName);
         const optimiserName: string = simSetDTO.optimiserName || model.getDefaultOptimiser().name;
         let optimiser: Optimiser<ConfiguratorParamData, OptimiserParameters, OptimiserData> =
             model.getOptimiser(optimiserName);
@@ -50,7 +45,8 @@ export class OptimiserService {
 
         if (!optimiserStateDTO) {
             stepCount = 0;
-            stateData = optimiser.initialise(simSetDTO);
+            
+            stateData = optimiser.initialise(simSetDTO.optimiserParams, simSetDTO);
         } else {
             stateData = optimiserStateDTO;
             stepCount = optimiserStateDTO.stepCount;
@@ -83,35 +79,28 @@ export class OptimiserService {
                     });
             })
             .then(async (optimiserState: OptimiserState) => {
-                // ****** CONFIGURATOR PARAMS
-                const configuratorParams: ConfiguratorParams[] = await this.configuratorParamsService.create(
-                    simSetDTO.modelName,
-                    configuratorName,
-                    optimiser.getStateRequiredConfiguratorParams(optimiserState),
-                    tEntityManager
-                );
-
+                // create the required convergence tests
                 // ****** CONVERGENCE TESTS
-                await this.convergenceTestService.create(
-                    configuratorParams,
+                const convergenceTests: ConvergenceTest[] = await this.convergenceTestService.create(
+                    optimiser.getStateRequiredConfiguratorParams(optimiserState),
                     optimiserState.simSet.simConfigParams || simSetDTO.simConfigParams,
                     optimiserState,
                     tEntityManager
                 );
-                return optimiserState;
+                return this.touch(optimiserState.id, tEntityManager);
             });
     }
 
     async touch(optimiserStateId: number, tEntityManager?: EntityManager): Promise<OptimiserState> {
         if (!tEntityManager) tEntityManager = this.dataSource.createEntityManager();
-        let model: Model<ConfiguratorParamData, OptimiserParameters, OptimiserData>;
+        let model: Model;
         let optimiser: Optimiser<ConfiguratorParamData, OptimiserParameters, OptimiserData>;
 
         if (this._dev) this._logger.log("Updating optimiser states");
         // fetch the optimiser state and related objects needed
         return tEntityManager
             .getRepository(OptimiserState)
-            .findOne({
+            .findOneOrFail({
                 where: {
                     id: optimiserStateId
                 },
@@ -122,9 +111,14 @@ export class OptimiserService {
                 optimiser = model.getOptimiser(optimiserState.optimiserName);
 
                 if (this._dev) this._logger.log(`Updating optimiser state id:${optimiserState.id}`);
+                console.log(optimiserState.convergenceTests)
                 // run the optimiser update method with the current ConvergenceTest results to get updated values
                 // for the optimiser state parameters
-                let updatedOptimiserState = optimiser.update(optimiserState, optimiserState.convergenceTests);
+                let updatedOptimiserState = optimiser.update(
+                    optimiserState.simSet.optimiserParams,
+                    optimiserState,
+                    optimiserState.convergenceTests
+                );
 
                 // if the update has flagged the optimiser state as completed, mark the end timestamp and duration
                 if (updatedOptimiserState.status === States.COMPLETED) {
@@ -136,37 +130,50 @@ export class OptimiserService {
             })
             .then(async (optimiserState: OptimiserState) => {
                 if (this._dev) this._logger.log(`Optimiser state ${optimiserState.id} updated`);
-                if (optimiserState.status === States.COMPLETED) {
+                if (optimiserState.status === States.RUNNING) {
+                    await tEntityManager
+                        .getRepository(SimSet)
+                        .update(optimiserState.simSet.id, { state: States.RUNNING });
+                } else if (optimiserState.status === States.COMPLETED) {
                     // the saved step also is complete.  We now check if the optimiser has converged to an optimal
                     // solution
                     if (!optimiserState.converged) {
-                        let newState = optimiser.step(optimiserState, optimiserState.convergenceTests);
+                        let newState = optimiser.step(
+                            optimiserState.simSet.optimiserParams,
+                            optimiserState,
+                            optimiserState.convergenceTests
+                        );
                         // no convergence to a maximum, but it is possible that we have made a loop i.e. ended up
                         // at a previous optimisation point
                         const requiredConfigParamHashes: string[] = optimiser
                             .getStateRequiredConfiguratorParams(newState)
                             .map((configParam) => configParam.hash);
-                        const existingConvergenceTestIdCount: number = (await tEntityManager
-                            .getRepository(ConvergenceTest)
-                            .createQueryBuilder()
-                            .innerJoin(
-                                "configurator_params",
-                                "ConfiguratorParams",
-                                "ConfiguratorParams.id = ConvergenceTest.configuratorParamsId"
-                            )
-                            .select("COUNT(ConvergenceTest.id)", "count")
-                            .where("ConfiguratorParams.hash IN(:hashes)", {
-                                hashes: requiredConfigParamHashes
-                            })
-                            .andWhere("ConvergenceTest.simConfigParamsId=:simConfigParamsId", {
-                                simConfigParamsId: optimiserState.simSet.simConfigParams.id
-                            })
-                            .getRawOne())["count"];
+                        const existingConvergenceTestIdCount: number = (
+                            await tEntityManager
+                                .getRepository(ConvergenceTest)
+                                .createQueryBuilder()
+                                .innerJoin(
+                                    "configurator_params",
+                                    "ConfiguratorParams",
+                                    "ConfiguratorParams.id = ConvergenceTest.configuratorParamsId"
+                                )
+                                .select("COUNT(ConvergenceTest.id)", "count")
+                                .where("ConfiguratorParams.hash IN(:hashes)", {
+                                    hashes: requiredConfigParamHashes
+                                })
+                                .andWhere("ConvergenceTest.simConfigParamsId=:simConfigParamsId", {
+                                    simConfigParamsId: optimiserState.simSet.simConfigParams.id
+                                })
+                                .getRawOne()
+                        )["count"];
                         if (existingConvergenceTestIdCount == requiredConfigParamHashes.length) {
                             if (this._dev)
                                 this._logger.log(
                                     `Optimiser state id:${optimiserState.id} completed; an already calculated optimiser state has been reached (loop)`
                                 );
+                            await tEntityManager
+                                .getRepository(SimSet)
+                                .update(optimiserState.simSet.id, { state: States.COMPLETED });
                             return null;
                         } else {
                             if (this._dev)
@@ -186,5 +193,18 @@ export class OptimiserService {
                 }
                 return optimiserState;
             });
+    }
+
+    findOne(id: number) {
+        return this.dataSource.getRepository(OptimiserState).findOneOrFail({
+            where: { id: id },
+            relations: {
+                simSet: true,
+                convergenceTests: {
+                    simConfigs: true,
+                    configuratorParams: true
+                }
+            }
+        });
     }
 }

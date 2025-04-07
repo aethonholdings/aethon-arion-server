@@ -1,6 +1,6 @@
 import { IsArray, IsIn, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString } from "class-validator";
 import { ApiProperty, PickType } from "@nestjs/swagger";
-import { ModelParamsDTO, SimConfigParamsDTO, SimSetDTO, StateType } from "aethon-arion-pipeline";
+import { ModelParamsDTO, OptimiserParameters, SimConfigParamsDTO, SimSetDTO, StateType } from "aethon-arion-pipeline";
 import { OptimiserState } from "aethon-arion-db";
 
 export class SimSetDTOGet implements SimSetDTO {
@@ -97,6 +97,16 @@ export class SimSetDTOGet implements SimSetDTO {
     })
     simConfigParams: SimConfigParamsDTO;
 
+    @IsObject()
+    @IsOptional()
+    @ApiProperty({
+        name: "optimiserParams",
+        type: Object,
+        description: "The parameters for the optimiser in this SimSet",
+        required: false
+    })
+    optimiserParams: OptimiserParameters;
+
     @IsNumber()
     @IsOptional()
     @ApiProperty({
@@ -125,20 +135,12 @@ export class SimSetDTOCreate extends PickType(SimSetDTOGet, [
     "modelParams",
     "optimiserName",
     "configuratorName",
-    "simConfigParams"
+    "simConfigParams",
+    "optimiserParams"
 ]) {
     @IsOptional()
     description: string;
 
     @IsOptional()
     modelParams: ModelParamsDTO;
-
-    @IsOptional()
-    optimiserName: string;
-
-    @IsOptional()
-    configuratorName: string;
-
-    @IsOptional()
-    simConfigParams: SimConfigParamsDTO;
 }

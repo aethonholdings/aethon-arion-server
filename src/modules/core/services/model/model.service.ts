@@ -15,7 +15,7 @@ import { DataSource } from "typeorm";
 export class ModelService {
     private _modelNames: string[];
     private _dev: boolean = false;
-    private _models: Model<ConfiguratorParamData, OptimiserParameters, OptimiserData>[] = [];
+    private _models: Model[] = [];
 
     constructor(private dataSource: DataSource) {
         const env: ServerEnvironment = environment();
@@ -28,7 +28,7 @@ export class ModelService {
         return this._modelNames;
     }
 
-    getModel(modelName: string): Model<ConfiguratorParamData, OptimiserParameters, OptimiserData> {
+    getModel(modelName: string): Model {
         const model = this._models.find((model) => model.name === modelName);
         if (model) return model;
         throw new Error(`Model ${modelName} not found`);

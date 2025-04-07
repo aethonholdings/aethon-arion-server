@@ -36,6 +36,7 @@ async function bootstrap() {
         .addTag("OrgConfig")
         .addTag("Result")
         .addTag("StateSpace")
+        .addTag("OptimiserState")
         .addTag("OpenAPI")
         .build();
     const document = SwaggerModule.createDocument(app, config);

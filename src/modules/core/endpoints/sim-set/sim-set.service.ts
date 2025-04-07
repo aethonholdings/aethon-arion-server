@@ -13,8 +13,8 @@ import { Injectable, Logger } from "@nestjs/common";
 import { And, DataSource, EntityManager, In, Not } from "typeorm";
 import { ModelService } from "../../services/model/model.service";
 import { SimSetDTOCreate } from "../../../../common/dto/sim-set.dto";
-import { OptimiserService } from "../../services/optimiser/optimiser.service";
 import { ServerEnvironment } from "src/common/types/server.types";
+import { OptimiserStateService } from "../optimiser-state/optimiser-state.service";
 import { Cron } from "@nestjs/schedule";
 
 @Injectable()
@@ -26,7 +26,7 @@ export class SimSetService {
     constructor(
         private dataSource: DataSource,
         private modelService: ModelService,
-        private optimiserService: OptimiserService
+        private optimiserService: OptimiserStateService
     ) {
         this._dev = environment().root.dev;
     }
@@ -52,7 +52,7 @@ export class SimSetService {
     }
 
     create(simSetDTO: SimSetDTOCreate): Promise<SimSetDTO> {
-        const model: Model<ConfiguratorParamData, OptimiserParameters, OptimiserData> = this.modelService.getModel(
+        const model: Model = this.modelService.getModel(
             simSetDTO.modelName
         );
         const configuratorName: string = simSetDTO.configuratorName || model.getDefaultConfigurator().name;
@@ -93,7 +93,7 @@ export class SimSetService {
                         if (this._dev) this._logger.log(`Creating sim set`);
                         return tEntityManager.getRepository(SimSet).save({
                             ...simSetDTO,
-                            optimiserParams: optimiser.parameters,
+                            optimiserParams: simSetDTO.optimiserParams,
                             optimiserName: optimiser.name,
                             configuratorName: configuratorName,
                             state: States.PENDING,
@@ -123,40 +123,9 @@ export class SimSetService {
         if (this._dev) this._logger.log(`Touching sim sets`);
         const simSets: SimSet[] = await this.dataSource.getRepository(SimSet).find({
             where: { state: And(Not(States.COMPLETED), Not(States.FAILED)) },
-            relations: { optimiserStates: { simSet: { simConfigParams: true } }, simConfigParams: true }
         });
-        for (let simSet of simSets) {
-            await this.optimiserService.touch(simSet.currentOptimiserStateId);
-        }
+
+        // NO RUNNING SIMSETS, CREATE A NEW ONE AUTOMATICALLY
+        
     }
-
-    // async touchSimSet(simSet: SimSet): Promise<SimSet> {
-    //     if (simSet.state === States.COMPLETED || simSet.state === States.FAILED) return simSet;
-    //     if (this._dev) this._logger.log(`Touching sim set ${simSet.id}`);
-
-    //     if (simSet.optimiserStates.length > 0) {
-    //         let completed: number = 0;
-    //         simSet.optimiserStates.forEach(async (optimiserState) => {
-    //             await this.optimiserService.touchState(optimiserState);
-    //             if (optimiserState.status === States.COMPLETED) completed++;
-    //             if (optimiserState.status === States.FAILED) simSet.state = States.FAILED;
-    //             if (optimiserState.status === States.RUNNING && simSet.state !== States.FAILED) {
-    //                 simSet.state = States.RUNNING;
-    //             }
-    //         });
-    //         if (simSet.optimiserStates.length > 0 && completed === simSet.optimiserStates.length)
-    //             simSet.state = States.COMPLETED;
-    //     }
-    //     await this.dataSource.getRepository(SimSet).save(simSet);
-    //     return this.dataSource
-    //         .getRepository(SimSet)
-    //         .findOneOrFail({
-    //             where: { id: simSet.id },
-    //             relations: { optimiserStates: { simSet: { simConfigParams: true } }, simConfigParams: true }
-    //         })
-    //         .then((simSet) => {
-    //             if (this._dev) this._logger.log(`Sim set ${simSet.id} touched`);
-    //             return simSet;
-    //         });
-    // }
 }

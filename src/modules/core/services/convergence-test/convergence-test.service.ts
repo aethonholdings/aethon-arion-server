@@ -1,6 +1,6 @@
 import { forwardRef, Inject, Injectable, Logger } from "@nestjs/common";
 import { DataSource, EntityManager, In } from "typeorm";
-import { ConvergenceTest, OrgConfig, SimConfig } from "aethon-arion-db";
+import { ConfiguratorParams, ConvergenceTest, OrgConfig, SimConfig, SimConfigParams } from "aethon-arion-db";
 import {
     ConfiguratorParamData,
     ConfiguratorParamsDTO,
@@ -13,7 +13,7 @@ import environment from "env/environment";
 import { OrgConfigService } from "../../endpoints/org-config/org-config.service";
 import { SimConfigService } from "../../endpoints/sim-config/sim-config.service";
 import { ModelService } from "../model/model.service";
-import { OptimiserService } from "../optimiser/optimiser.service";
+import { OptimiserStateService } from "../../endpoints/optimiser-state/optimiser-state.service";
 
 @Injectable()
 export class ConvergenceTestService {
@@ -27,47 +27,75 @@ export class ConvergenceTestService {
         private modelService: ModelService,
         private orgConfigService: OrgConfigService,
         @Inject(forwardRef(() => SimConfigService)) private simConfigService: SimConfigService,
-        private optimiserService: OptimiserService
+        private optimiserService: OptimiserStateService
     ) {
         this._dev = this._env.root.dev;
         this._convergenceMargin = this._env.options.convergenceMargin || 0.01;
     }
 
-    create(
-        configuratorParamsDTOs: ConfiguratorParamsDTO<ConfiguratorParamData>[],
+    async create(
+        requiredConfiguratorParamsDTOs: ConfiguratorParamsDTO<ConfiguratorParamData>[],
         simConfigParamsDTO: SimConfigParamsDTO,
         optimiserState: OptimiserStateDTO<ConfiguratorParamData>,
         tEntityManager?: EntityManager
     ): Promise<ConvergenceTest[]> {
-        // create a new convergence test
-        if (!Array.isArray(configuratorParamsDTOs)) configuratorParamsDTOs = [configuratorParamsDTOs];
         if (!tEntityManager) tEntityManager = this.dataSource.createEntityManager();
-        if (this._dev) this._logger.log(`Creating convergence tests`);
-        
+        const requiredHashes: string[] = requiredConfiguratorParamsDTOs.map((param) => param.hash);
+
+        if (this._dev) this._logger.log(`Generating convergence tests`);
         // find if a convergence test already exists for the required configuratorParams and simConfigParams
+        if (this._dev) this._logger.log(`Searching for matching existing ConfigParams`);
         return tEntityManager
-            .getRepository(ConvergenceTest)
+            .getRepository(ConfiguratorParams)
             .find({
                 where: {
-                    configuratorParams: {
-                        id: In(configuratorParamsDTOs.map((param) => param.id))
-                    },
-                    simConfigParams: { id: simConfigParamsDTO.id }
+                    hash: In(requiredHashes)
                 }
             })
-            .then(async (convergenceTests: ConvergenceTest[]) => {
-                if (this._dev) this._logger.log(`Generating convergence tests`);
-                // cycle through all the configuratorParams and look for a related convergence test
-                for (let configuratorParamDTO of configuratorParamsDTOs) {
-                    let convergenceTest = convergenceTests.find(
-                        (convergenceTest: ConvergenceTest) =>
-                            convergenceTest?.configuratorParams.id === configuratorParamDTO.id
+            .then(async (configuratorParamsFound: ConfiguratorParams[]) => {
+                if (this._dev)
+                    this._logger.log(`${configuratorParamsFound.length} matching existing ConfigParams found`);
+                const convergenceTests: ConvergenceTest[] = [];
+                // cycle through all the configuratorParams and
+                // (1) create a ConfiguratorParam if one does not exist; link to the existing one if yes
+                // (2) create a new convergence test if one does not exist for the ConfiguratorParams and SimConfigParams
+                // (3) create any necessary sim and orgConfigs
+
+                // cycle through all requiredConfigParams
+                for (let requiredConfiguratorParamsDTO of requiredConfiguratorParamsDTOs) {
+                    // see if the required configParams were found in the database
+                    let configuratorParams: ConfiguratorParams = configuratorParamsFound.find(
+                        (params) => params.hash === requiredConfiguratorParamsDTO.hash
                     );
-                    // if the convergence test does not exist, create it
-                    if (!convergenceTest) {
-                        // create a bew convergence test
+                    // if the required configParams were not found in the database, create a
+                    // new instance
+                    if (!configuratorParams) {
+                        if (this._dev) this._logger.log(`Generating new ConfigParam`);
+                        configuratorParams = await tEntityManager
+                            .getRepository(ConfiguratorParams)
+                            .save(requiredConfiguratorParamsDTO);
+                        this._logger.log(`ConfigParam ${configuratorParams.id} generated`);
+                    }
+
+                    // now see if an existing convergence test with the required configParams exist
+                    if (this._dev) this._logger.log(`Searching for matching existing ConvergenceTests`);
+                    let convergenceTest: ConvergenceTest = await tEntityManager
+                        .getRepository(ConvergenceTest)
+                        .createQueryBuilder()
+                        .select("id", "id")
+                        .where("ConvergenceTest.configuratorParamsId=:configuratorParamsId", {
+                            configuratorParamsId: configuratorParams.id
+                        })
+                        .andWhere("ConvergenceTest.simConfigParamsId=:simConfigParamsId", {
+                            simConfigParamsId: simConfigParamsDTO.id
+                        }).getRawOne();
+                    if (convergenceTest) {
+                        if (this._dev) this._logger.log(`Existing convergence test ${convergenceTest.id} found`);
+                    } else {
+                        // create a new convergence test
+                        if (this._dev) this._logger.log(`Generating a new convergenceTest`);
                         convergenceTest = await tEntityManager.getRepository(ConvergenceTest).save({
-                            configuratorParams: configuratorParamDTO,
+                            configuratorParams: configuratorParams,
                             simConfigParams: simConfigParamsDTO,
                             state: States.PENDING,
                             orgConfigCount: 0,
@@ -78,6 +106,7 @@ export class ConvergenceTestService {
                             converged: false,
                             optimiserStates: [optimiserState]
                         });
+                        if (this._dev) this._logger.log(`ConvergenceTest ${convergenceTest.id} created`);
                         // create new orgConfigs against the convergene test
                         const orgConfigs: OrgConfig[] = await this.orgConfigService.create(
                             convergenceTest.configuratorParams,
@@ -100,7 +129,7 @@ export class ConvergenceTestService {
                             orgConfigCount: orgConfigs.length,
                             simConfigCount: simConfigs.length
                         });
-                    } 
+                    }
                     convergenceTests.push(convergenceTest);
                 }
                 return convergenceTests;
@@ -161,7 +190,7 @@ export class ConvergenceTestService {
                                 // we have an estimate of stddev, therefore calculate its percentage change with the new
                                 // summary statistics of results to see if we have converged
                                 const percentChange = Math.abs(
-                                    (simConfigSet.stdDevPerformance - convergenceTest.stdDevPerformance ) /
+                                    (simConfigSet.stdDevPerformance - convergenceTest.stdDevPerformance) /
                                         convergenceTest.stdDevPerformance
                                 );
                                 converged = percentChange < this._convergenceMargin ? true : false;

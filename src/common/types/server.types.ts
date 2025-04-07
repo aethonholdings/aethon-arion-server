@@ -34,5 +34,5 @@ export type ArionOptions = {
     minRuns: number;
     randomStreamType: "static" | "random";
     simulationDays: number;
-    models: Model<ConfiguratorParamData, OptimiserParameters, OptimiserData>[];
+    models: Model[];
 };

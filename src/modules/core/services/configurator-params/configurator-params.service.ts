@@ -42,13 +42,13 @@ export class ConfiguratorParamsService {
         tEntityManager?: EntityManager
     ): Promise<ConfiguratorParams[]> {
         if (!tEntityManager) tEntityManager = this.dataSource.createEntityManager();
-        const model: Model<ConfiguratorParamData, OptimiserParameters, OptimiserData> =
+        const model: Model =
             this.modelService.getModel(modelName);
-        const configurator: Configurator<ConfiguratorParamData, OptimiserParameters, OptimiserData> =
+        const configurator: Configurator<ConfiguratorParamData> =
             model.getConfigurator(configuratorName);
         if (!Array.isArray(configuratorParamsDTOs)) configuratorParamsDTOs = [configuratorParamsDTOs];
 
-        // create a new configurator params
+        // create new configurator params
         // ****** CONFIGURATOR PARAMS
         // assess the configurator params required in the current optimiser state
         // find whether they correspond to existing configurator params
