@@ -79,7 +79,7 @@ export class ConvergenceTestService {
 
                     // now see if an existing convergence test with the required configParams exist
                     if (this._dev) this._logger.log(`Searching for matching existing ConvergenceTests`);
-                    let convergenceTest: ConvergenceTest = await tEntityManager
+                    await tEntityManager
                         .getRepository(ConvergenceTest)
                         .createQueryBuilder()
                         .select("id", "id")
@@ -88,49 +88,63 @@ export class ConvergenceTestService {
                         })
                         .andWhere("ConvergenceTest.simConfigParamsId=:simConfigParamsId", {
                             simConfigParamsId: simConfigParamsDTO.id
-                        }).getRawOne();
-                    if (convergenceTest) {
-                        if (this._dev) this._logger.log(`Existing convergence test ${convergenceTest.id} found`);
-                    } else {
-                        // create a new convergence test
-                        if (this._dev) this._logger.log(`Generating a new convergenceTest`);
-                        convergenceTest = await tEntityManager.getRepository(ConvergenceTest).save({
-                            configuratorParams: configuratorParams,
-                            simConfigParams: simConfigParamsDTO,
-                            state: States.PENDING,
-                            orgConfigCount: 0,
-                            simConfigCount: 0,
-                            completedSimConfigCount: 0,
-                            resultCount: 0,
-                            dispatchedRuns: 0,
-                            converged: false,
-                            optimiserStates: [optimiserState]
+                        })
+                        .getRawOne()
+                        .then(async (convergenceTestPartial: ConvergenceTest) => {
+                            if (convergenceTestPartial) {
+                                if (this._dev)
+                                    this._logger.log(`Existing convergence test ${convergenceTestPartial.id} found`);
+                            } else {
+                                // create a new convergence test
+                                if (this._dev) this._logger.log(`Generating a new convergenceTest`);
+                                const convergenceTest: ConvergenceTest = await tEntityManager
+                                    .getRepository(ConvergenceTest)
+                                    .save({
+                                        configuratorParams: configuratorParams,
+                                        simConfigParams: simConfigParamsDTO,
+                                        state: States.PENDING,
+                                        orgConfigCount: 0,
+                                        simConfigCount: 0,
+                                        completedSimConfigCount: 0,
+                                        resultCount: 0,
+                                        dispatchedRuns: 0,
+                                        converged: false,
+                                        optimiserStates: [optimiserState]
+                                    });
+
+                                if (this._dev) this._logger.log(`ConvergenceTest ${convergenceTest.id} created`);
+                                // check the required orgConfigCount based on the requiredConfiguratorParamsDTO.multipleOrgConfigs
+                                let orgConfigCountMin = requiredConfiguratorParamsDTO.multipleOrgConfigs
+                                    ? this._env.options.minRuns
+                                    : 1;
+
+                                if (this._dev)
+                                    this._logger.log(
+                                        `Generating orgConfigs and simConfigs against the convergence test`
+                                    );
+                                // create the required number of orgConfigs
+                                for (let i = 0; i < orgConfigCountMin; i++) {
+                                    await this.orgConfigService
+                                        .create(convergenceTest.configuratorParams, tEntityManager)
+                                        .then((orgConfig: OrgConfig) =>
+                                            this.simConfigService.create(
+                                                convergenceTest.simConfigParams,
+                                                orgConfig,
+                                                convergenceTest,
+                                                tEntityManager
+                                            )
+                                        );
+                                }
+                                await tEntityManager.getRepository(ConvergenceTest).update(convergenceTest.id, {
+                                    orgConfigCount: orgConfigCountMin,
+                                    simConfigCount: orgConfigCountMin
+                                });
+                                if (this._dev)
+                                    this._logger.log(
+                                        `OrgConfigs and simConfigs generated against the convergence test`
+                                    );
+                            }
                         });
-                        if (this._dev) this._logger.log(`ConvergenceTest ${convergenceTest.id} created`);
-                        // create new orgConfigs against the convergene test
-                        const orgConfigs: OrgConfig[] = await this.orgConfigService.create(
-                            convergenceTest.configuratorParams,
-                            tEntityManager
-                        );
-                        // create a simConfig against each new orgConfig
-                        let simConfigs: SimConfig[] = [];
-                        for (let orgConfig of orgConfigs) {
-                            simConfigs = [
-                                ...simConfigs,
-                                await this.simConfigService.create(
-                                    convergenceTest.simConfigParams,
-                                    orgConfig,
-                                    convergenceTest,
-                                    tEntityManager
-                                )
-                            ];
-                        }
-                        await tEntityManager.getRepository(ConvergenceTest).update(convergenceTest.id, {
-                            orgConfigCount: orgConfigs.length,
-                            simConfigCount: simConfigs.length
-                        });
-                    }
-                    convergenceTests.push(convergenceTest);
                 }
                 return convergenceTests;
             })

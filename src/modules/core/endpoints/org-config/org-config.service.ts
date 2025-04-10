@@ -35,46 +35,15 @@ export class OrgConfigService {
     create(
         configuratorParamsDTO: ConfiguratorParamsDTO<ConfiguratorParamData>,
         tEntityManager?: EntityManager
-    ): Promise<OrgConfig[]> {
-        // generate the org configs required for each convergence test
-        if (this._dev) this._logger.log(`Creating OrgConfigs`);
-        if (!tEntityManager) tEntityManager = this.dataSource.createEntityManager();
-
-        return tEntityManager
-            .getRepository(OrgConfig)
-            .find({
-                where: {
-                    configuratorParams: {
-                        id: configuratorParamsDTO.id
-                    }
-                }
-            })
-            .then(async (orgConfigs: OrgConfig[]) => {
-                // check if the required number of orgConfigs paired with a simConfig exist
-                let orgConfigCountMin: number = 1;
-                if (configuratorParamsDTO.multipleOrgConfigs) orgConfigCountMin = this._env.options.minRuns;
-                const existingOrgConfigCount = orgConfigs.filter(
-                    (orgConfig) => orgConfig.configuratorParams.id === configuratorParamsDTO.id
-                ).length;
-                const newOrgConfigs: OrgConfig[] = [];
-                if (existingOrgConfigCount < orgConfigCountMin) {
-                    const model = this.modelService.getModel(configuratorParamsDTO.modelName);
-                    const configuratorName =
-                        configuratorParamsDTO.configuratorName || model.getDefaultConfigurator().name;
-                    // create the required number of orgConfigs
-                    for (let i = 0; i < orgConfigCountMin - existingOrgConfigCount; i++) {
-                        newOrgConfigs.push(
-                            await tEntityManager.getRepository(OrgConfig).save({
-                                ...model.getConfigurator(configuratorName).generate(configuratorParamsDTO),
-                                simConfigs: [],
-                                configuratorParams: configuratorParamsDTO,
-                                type: model.name
-                            })
-                        );
-                    }
-                }
-                return [...orgConfigs, ...newOrgConfigs];
-            });
+    ): Promise<OrgConfig> {
+        const model = this.modelService.getModel(configuratorParamsDTO.modelName);
+        const configuratorName = configuratorParamsDTO.configuratorName || model.getDefaultConfigurator().name;
+        return tEntityManager.getRepository(OrgConfig).save({
+            ...model.getConfigurator(configuratorName).generate(configuratorParamsDTO),
+            simConfigs: [],
+            configuratorParams: configuratorParamsDTO,
+            type: model.name
+        });
     }
 
     delete(id: number): Promise<number> {

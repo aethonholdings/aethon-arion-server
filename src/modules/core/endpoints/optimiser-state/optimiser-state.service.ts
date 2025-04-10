@@ -45,7 +45,7 @@ export class OptimiserStateService {
 
         if (!optimiserStateDTO) {
             stepCount = 0;
-            
+
             stateData = optimiser.initialise(simSetDTO.optimiserParams, simSetDTO);
         } else {
             stateData = optimiserStateDTO;
@@ -95,6 +95,7 @@ export class OptimiserStateService {
         if (!tEntityManager) tEntityManager = this.dataSource.createEntityManager();
         let model: Model;
         let optimiser: Optimiser<ConfiguratorParamData, OptimiserParameters, OptimiserData>;
+        let simSet: SimSet;
 
         if (this._dev) this._logger.log("Updating optimiser states");
         // fetch the optimiser state and related objects needed
@@ -109,6 +110,7 @@ export class OptimiserStateService {
             .then(async (optimiserState: OptimiserState) => {
                 model = this.modelService.getModel(optimiserState.modelName);
                 optimiser = model.getOptimiser(optimiserState.optimiserName);
+                simSet = optimiserState.simSet;
 
                 if (this._dev) this._logger.log(`Updating optimiser state id:${optimiserState.id}`);
                 // run the optimiser update method with the current ConvergenceTest results to get updated values
@@ -189,6 +191,14 @@ export class OptimiserStateService {
                             this._logger.log(`Optimiser converged for SimSet id:${optimiserState.simSet.id}`);
                         return null;
                     }
+                }
+                return optimiserState;
+            })
+            .then(async (optimiserState) => {
+                // finally, if the optimisation has completed, update the SimSet
+                if (!optimiserState) {
+                    simSet.state = States.COMPLETED;
+                    await tEntityManager.getRepository(SimSet).save(simSet);
                 }
                 return optimiserState;
             });
