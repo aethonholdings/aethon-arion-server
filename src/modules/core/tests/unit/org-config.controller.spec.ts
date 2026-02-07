@@ -38,12 +38,20 @@ describe("Model module: OrgConfigController", () => {
     });
 
     it("should create return and delete a single org config", async () => {
-        const create = await controller.create(orgConfigControllerCreateTestData.basic);
-        expect(create).toBeDefined();
+        const createResult = await controller.create(orgConfigControllerCreateTestData.basic);
+        expect(createResult).toBeDefined();
+
+        // Handle union type - create can return single object or array
+        const create = Array.isArray(createResult) ? createResult[0] : createResult;
         expect(create.id).toBeDefined();
+
         const result = await controller.view(create.id);
         expect(result).toBeDefined();
-        expect(result.id).toEqual(create.id);
+
+        // Handle union type - view can return single object or array
+        const viewResult = Array.isArray(result) ? result[0] : result;
+        expect(viewResult.id).toEqual(create.id);
+
         const deleted = await controller.delete(create.id);
         expect(deleted).toBeDefined();
         expect(deleted).toEqual(create.id);

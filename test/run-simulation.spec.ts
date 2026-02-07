@@ -1,25 +1,25 @@
 import { ModuleMetadata } from "@nestjs/common";
-import { environment } from "../environment/test.environment";
+import { environment } from "../src/modules/core/tests/environment/test.environment";
 import { Test, TestingModule } from "@nestjs/testing";
 import { DataSource } from "typeorm";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { OrgConfig, Result, SimConfig, SimSet } from "aethon-arion-db";
-import { SimSetController } from "../../endpoints/sim-set/sim-set.controller";
-import { OrgConfigController } from "../../endpoints/org-config/org-config.controller";
-import { ResultController } from "../../endpoints/result/result.controller";
-import { SimConfigController } from "../../endpoints/sim-config/sim-config.controller";
-import { OrgConfigService } from "../../endpoints/org-config/org-config.service";
-import { ResultService } from "../../endpoints/result/result.service";
-import { SimConfigService } from "../../endpoints/sim-config/sim-config.service";
-import { SimSetService } from "../../endpoints/sim-set/sim-set.service";
-import { ModelService } from "../../services/model.service";
-import { simSetControllerTestData } from "../data/sim-set.controller.test.data";
-import { orgConfigControllerCreateTestData } from "../data/org-config.controller.test.data";
+import { SimSetController } from "../src/modules/core/endpoints/sim-set/sim-set.controller";
+import { OrgConfigController } from "../src/modules/core/endpoints/org-config/org-config.controller";
+import { ResultController } from "../src/modules/core/endpoints/result/result.controller";
+import { SimConfigController } from "../src/modules/core/endpoints/sim-config/sim-config.controller";
+import { OrgConfigService } from "../src/modules/core/endpoints/org-config/org-config.service";
+import { ResultService } from "../src/modules/core/endpoints/result/result.service";
+import { SimConfigService } from "../src/modules/core/endpoints/sim-config/sim-config.service";
+import { SimSetService } from "../src/modules/core/endpoints/sim-set/sim-set.service";
+import { ModelService } from "../src/modules/core/services/model/model.service";
+import { simSetControllerTestData } from "../src/modules/core/tests/data/sim-set.controller.test.data";
+import { orgConfigControllerCreateTestData } from "../src/modules/core/tests/data/org-config.controller.test.data";
 import {
     simConfigControllerSimulationTestResults,
     simConfigControllerTestData
-} from "../data/sim-config.controller.test.data";
-import { nodeId, resultControllerCreateTestData } from "../data/result.controller.test.data";
+} from "../src/modules/core/tests/data/sim-config.controller.test.data";
+import { nodeId, resultControllerCreateTestData } from "../src/modules/core/tests/data/result.controller.test.data";
 
 describe.skip("Model module: run simulation", () => {
     let dataSource: DataSource;
