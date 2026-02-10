@@ -8,8 +8,7 @@ import { ModuleMetadata } from "@nestjs/common";
 import { simSetControllerTestData } from "../data/sim-set.controller.test.data";
 import { SimSetController } from "../../endpoints/sim-set/sim-set.controller";
 import { SimSetService } from "../../endpoints/sim-set/sim-set.service";
-import { SimConfigService } from "../../endpoints/sim-config/sim-config.service";
-import { ResultService } from "../../endpoints/result/result.service";
+import { OptimiserStateService } from "../../endpoints/optimiser-state/optimiser-state.service";
 
 describe("Model module: SimSetController", () => {
     let controller: SimSetController;
@@ -19,7 +18,11 @@ describe("Model module: SimSetController", () => {
     const testingModuleConfig: ModuleMetadata = {
         imports: [TypeOrmModule.forRoot(env.database), TypeOrmModule.forFeature([SimSet])],
         controllers: [SimSetController],
-        providers: [SimSetService, SimConfigService, ResultService, ModelService]
+        providers: [
+            SimSetService,
+            ModelService,
+            { provide: OptimiserStateService, useValue: { create: jest.fn(), touch: jest.fn() } }
+        ]
     };
 
     beforeEach(async () => {

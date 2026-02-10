@@ -14,7 +14,9 @@ async function bootstrap() {
     let options: any = {};
     // allow CORS for localhost dev environment
     env.root.dev ? (options = { cors: true }) : null;
-    // create the root module
+    // create the root module, disabling the built-in body parser so that the custom
+    // body parser with a higher limit is used instead
+    options.bodyParser = false;
     const app = await NestFactory.create(RootModule, options);
 
     // set global prefix for all routes

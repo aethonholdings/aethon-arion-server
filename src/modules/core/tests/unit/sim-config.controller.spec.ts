@@ -8,6 +8,7 @@ import { Paginator } from "aethon-nestjs-paginate";
 import { SimConfigController } from "../../endpoints/sim-config/sim-config.controller";
 import { SimConfigService } from "../../endpoints/sim-config/sim-config.service";
 import { ModelService } from "../../services/model/model.service";
+import { ConvergenceTestService } from "../../services/convergence-test/convergence-test.service";
 import { indexTestQuery } from "../data/sim-config.controller.test.data";
 import { nodeId } from "../data/result.controller.test.data";
 import { simConfigPaginationConfig } from "src/modules/core/constants/pagination-config.constants";
@@ -20,7 +21,11 @@ describe("Model module: SimConfigController", () => {
     const testingModuleConfig: ModuleMetadata = {
         imports: [TypeOrmModule.forRoot(env.database), TypeOrmModule.forFeature([SimConfig])],
         controllers: [SimConfigController],
-        providers: [SimConfigService, ModelService]
+        providers: [
+            SimConfigService,
+            ModelService,
+            { provide: ConvergenceTestService, useValue: { touch: jest.fn(), create: jest.fn() } }
+        ]
     };
 
     beforeEach(async () => {

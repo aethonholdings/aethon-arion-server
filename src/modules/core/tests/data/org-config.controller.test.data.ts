@@ -12,7 +12,7 @@ export const orgConfigControllerCreateTestData: { [key: string]: ConfiguratorPar
             matrixInit: { judgment: "random", incentive: "purposeful", influence: "null" },
             actionStateProbability: 0.85
         },
-        configuratorName: "C1Configurator",
+        configuratorName: "C1BaseConfigurator",
         modelName: "C1",
         multipleOrgConfigs: true,
     }

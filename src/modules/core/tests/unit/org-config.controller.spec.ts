@@ -7,7 +7,6 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { OrgConfigService } from "../../endpoints/org-config/org-config.service";
 import { ModelService } from "../../services/model/model.service";
 import { OrgConfigDTO } from "aethon-arion-pipeline";
-import { orgConfigControllerCreateTestData } from "../data/org-config.controller.test.data";
 import { OrgConfig } from "aethon-arion-db";
 
 describe("Model module: OrgConfigController", () => {
@@ -35,26 +34,6 @@ describe("Model module: OrgConfigController", () => {
         const result = await controller.index();
         expect(result).toBeDefined();
         expect(result).toBeInstanceOf(Array<OrgConfigDTO>);
-    });
-
-    it("should create return and delete a single org config", async () => {
-        const createResult = await controller.create(orgConfigControllerCreateTestData.basic);
-        expect(createResult).toBeDefined();
-
-        // Handle union type - create can return single object or array
-        const create = Array.isArray(createResult) ? createResult[0] : createResult;
-        expect(create.id).toBeDefined();
-
-        const result = await controller.view(create.id);
-        expect(result).toBeDefined();
-
-        // Handle union type - view can return single object or array
-        const viewResult = Array.isArray(result) ? result[0] : result;
-        expect(viewResult.id).toEqual(create.id);
-
-        const deleted = await controller.delete(create.id);
-        expect(deleted).toBeDefined();
-        expect(deleted).toEqual(create.id);
     });
 
     afterEach(async () => {

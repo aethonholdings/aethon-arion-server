@@ -36,6 +36,7 @@ export class OrgConfigService {
         configuratorParamsDTO: ConfiguratorParamsDTO<ConfiguratorParamData>,
         tEntityManager?: EntityManager
     ): Promise<OrgConfig> {
+        if (!tEntityManager) tEntityManager = this.dataSource.createEntityManager();
         const model = this.modelService.getModel(configuratorParamsDTO.modelName);
         const configuratorName = configuratorParamsDTO.configuratorName || model.getDefaultConfigurator().name;
         return tEntityManager.getRepository(OrgConfig).save({

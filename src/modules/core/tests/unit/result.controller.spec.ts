@@ -7,6 +7,7 @@ import { ModuleMetadata } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { Result } from "aethon-arion-db";
 import { ModelService } from "../../services/model/model.service";
+import { ConvergenceTestService } from "../../services/convergence-test/convergence-test.service";
 
 describe("Model module: ResultsController", () => {
     let controller: ResultController;
@@ -16,7 +17,11 @@ describe("Model module: ResultsController", () => {
     const testingModuleConfig: ModuleMetadata = {
         imports: [TypeOrmModule.forRoot(env.database), TypeOrmModule.forFeature([Result])],
         controllers: [ResultController],
-        providers: [ResultService, ModelService]
+        providers: [
+            ResultService,
+            ModelService,
+            { provide: ConvergenceTestService, useValue: { touch: jest.fn(), create: jest.fn() } }
+        ]
     };
 
     beforeEach(async () => {

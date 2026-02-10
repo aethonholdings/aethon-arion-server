@@ -9,7 +9,7 @@ describe("Model module: SeedsController", () => {
 
     const testingModuleConfig: ModuleMetadata = {
         controllers: [SeedsController],
-        providers: [SeedsService, ModelService]
+        providers: [SeedsService, { provide: ModelService, useValue: {} }]
     };
 
     beforeEach(async () => {
