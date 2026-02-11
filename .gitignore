@@ -46,3 +46,6 @@ lerna-debug.log*
 # yalc
 .yalc
 yalc.lock
+
+# Claude Code
+.claude/
