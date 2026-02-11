@@ -105,7 +105,13 @@ export class OptimiserStateService {
                 where: {
                     id: optimiserStateId
                 },
-                relations: { simSet: { simConfigParams: true }, convergenceTests: { configuratorParams: true } }
+                relations: {
+                    simSet: { simConfigParams: true },
+                    convergenceTests: {
+                        configuratorParams: true,
+                        simConfigs: true
+                    }
+                }
             })
             .then(async (optimiserState: OptimiserState) => {
                 model = this.modelService.getModel(optimiserState.modelName);
@@ -210,7 +216,9 @@ export class OptimiserStateService {
             relations: {
                 simSet: true,
                 convergenceTests: {
-                    simConfigs: true,
+                    simConfigs: {
+                        orgConfig: true
+                    },
                     configuratorParams: true
                 }
             }

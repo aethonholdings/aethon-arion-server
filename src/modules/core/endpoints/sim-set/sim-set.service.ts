@@ -44,7 +44,13 @@ export class SimSetService {
             where: { id: id },
             relations: {
                 optimiserStates: {
-                    convergenceTests: true
+                    convergenceTests: {
+                        simConfigs: {
+                            orgConfig: {
+                                configuratorParams: true
+                            }
+                        }
+                    }
                 },
                 simConfigParams: true
             }

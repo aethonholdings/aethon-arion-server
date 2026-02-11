@@ -63,8 +63,16 @@ export class SimConfigService {
     }
 
     findOne(id: number): Promise<SimConfigDTO> {
-        return this.dataSource.getRepository(SimConfig).findOne({
-            relations: ["orgConfig", "simSet", "simConfigParams"],
+        return this.dataSource.getRepository(SimConfig).findOneOrFail({
+            relations: {
+                orgConfig: true,
+                simConfigParams: true,
+                convergenceTest: {
+                    optimiserStates: {
+                        simSet: true
+                    }
+                }
+            },
             where: { id: id }
         });
     }
