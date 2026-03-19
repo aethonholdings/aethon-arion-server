@@ -115,7 +115,7 @@ export class ConvergenceTestService {
                                 if (this._dev) this._logger.log(`ConvergenceTest ${convergenceTest.id} created`);
                                 // check the required orgConfigCount based on the requiredConfiguratorParamsDTO.multipleOrgConfigs
                                 let orgConfigCountMin = requiredConfiguratorParamsDTO.multipleOrgConfigs
-                                    ? this._env.options.minRuns
+                                    ? this._env.options.minOrgConfigs
                                     : 1;
 
                                 if (this._dev)

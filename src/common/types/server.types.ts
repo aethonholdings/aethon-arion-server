@@ -31,7 +31,8 @@ export type ServerEnvironment = {
 export type ArionOptions = {
     storeStateSpace: boolean;
     convergenceMargin: number;
-    minRuns: number;
+    minOrgConfigs: number;
+    minSimRuns: number;
     randomStreamType: "static" | "random";
     simulationDays: number;
     models: Model[];

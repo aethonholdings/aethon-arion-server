@@ -2,7 +2,7 @@ import { Body, Controller, Delete, Get, Param, Post, Query } from "@nestjs/commo
 import { OrgConfigService } from "./org-config.service";
 import { ApiBody, ApiOkResponse, ApiParam, ApiQuery, ApiTags } from "@nestjs/swagger";
 import { ConfiguratorParamsDTOCreate } from "../../../../common/dto/configurator-param.dto";
-import { OrgConfigDTOGet } from "../../../../common/dto/org-config.dto";
+import { OrgConfigDTOGet, OrgConfigSummaryDTO } from "../../../../common/dto/org-config.dto";
 
 @Controller("org-config")
 @ApiTags("OrgConfig")
@@ -25,6 +25,45 @@ export class OrgConfigController {
     })
     index(@Query("type") type?: string): Promise<OrgConfigDTOGet[]> {
         return this.orgConfigService.findAll(type) as Promise<OrgConfigDTOGet[]>;
+    }
+
+    // endpoint that fetches all OrgConfigs that currently have at least one running SimConfig
+    @Get("running")
+    @ApiOkResponse({
+        type: OrgConfigDTOGet,
+        isArray: true,
+        description: "All OrgConfig objects that have at least one SimConfig in the running state"
+    })
+    running(): Promise<OrgConfigDTOGet[]> {
+        return this.orgConfigService.findRunning() as Promise<OrgConfigDTOGet[]>;
+    }
+
+    // endpoint that fetches all OrgConfigs with a given agent count, including simConfigs
+    @Get("agent-count/:agentCount")
+    @ApiParam({
+        name: "agentCount",
+        type: Number,
+        description: "The agent count to filter OrgConfigs by",
+        example: 13
+    })
+    @ApiOkResponse({
+        type: OrgConfigDTOGet,
+        isArray: true,
+        description: "All OrgConfig objects with the specified agent count, including their SimConfigs"
+    })
+    byAgentCount(@Param("agentCount") agentCount: number): Promise<OrgConfigDTOGet[]> {
+        return this.orgConfigService.findByAgentCount(agentCount) as Promise<OrgConfigDTOGet[]>;
+    }
+
+    // endpoint that returns a performance summary grouped by agent count
+    @Get("summary")
+    @ApiOkResponse({
+        type: OrgConfigSummaryDTO,
+        isArray: true,
+        description: "Avg, best and stdDev performance grouped by agent count across all org configs"
+    })
+    summary(): Promise<OrgConfigSummaryDTO[]> {
+        return this.orgConfigService.getSummary();
     }
 
     // endpoint that fetches a single OrgConfig by ID

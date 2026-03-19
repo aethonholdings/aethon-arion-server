@@ -11,6 +11,31 @@ import {
 } from "aethon-arion-pipeline";
 import { IsNumber, IsObject, IsOptional, IsString } from "class-validator";
 
+export class OrgConfigSummaryDTO {
+    @IsNumber()
+    @ApiProperty({ name: "agentCount", type: Number, description: "Number of agents in the org config", example: 13 })
+    agentCount: number;
+
+    @IsNumber()
+    @ApiProperty({ name: "orgConfigCount", type: Number, description: "Number of distinct org configs with this agent count", example: 42 })
+    orgConfigCount: number;
+
+    @IsNumber()
+    @IsOptional()
+    @ApiProperty({ name: "avgPerformance", type: Number, nullable: true, description: "Average of avgPerformance across all sim configs for this agent count", example: 1250000 })
+    avgPerformance: number | null;
+
+    @IsNumber()
+    @IsOptional()
+    @ApiProperty({ name: "bestPerformance", type: Number, nullable: true, description: "Maximum avgPerformance seen for this agent count", example: 4500000 })
+    bestPerformance: number | null;
+
+    @IsNumber()
+    @IsOptional()
+    @ApiProperty({ name: "stdDevPerformance", type: Number, nullable: true, description: "Standard deviation of avgPerformance for this agent count", example: 890000 })
+    stdDevPerformance: number | null;
+}
+
 export class OrgConfigDTOGet implements OrgConfigDTO {
     @IsNumber()
     @ApiProperty({

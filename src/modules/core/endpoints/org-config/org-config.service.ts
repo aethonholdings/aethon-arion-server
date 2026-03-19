@@ -1,5 +1,6 @@
-import { OrgConfig } from "aethon-arion-db";
+import { OrgConfig, SimConfig } from "aethon-arion-db";
 import { ConfiguratorParamData, ConfiguratorParamsDTO, OrgConfigDTO } from "aethon-arion-pipeline";
+import { OrgConfigSummaryDTO } from "src/common/dto/org-config.dto";
 import { Injectable, Logger } from "@nestjs/common";
 import { DataSource, EntityManager, In } from "typeorm";
 import { ModelService } from "../../services/model/model.service";
@@ -45,6 +46,45 @@ export class OrgConfigService {
             configuratorParams: configuratorParamsDTO,
             type: model.name
         });
+    }
+
+    findRunning(): Promise<OrgConfigDTO[]> {
+        return this.dataSource
+            .getRepository(OrgConfig)
+            .createQueryBuilder('orgConfig')
+            .leftJoinAndSelect('orgConfig.simConfigs', 'simConfig')
+            .leftJoinAndSelect('orgConfig.configuratorParams', 'configuratorParams')
+            .where(qb => {
+                const sub = qb.subQuery()
+                    .select('sc.orgConfigId')
+                    .from(SimConfig, 'sc')
+                    .where('sc.state = :state')
+                    .getQuery();
+                return 'orgConfig.id IN ' + sub;
+            })
+            .setParameter('state', 'running')
+            .getMany();
+    }
+
+    findByAgentCount(agentCount: number): Promise<OrgConfigDTO[]> {
+        return this.dataSource.getRepository(OrgConfig).find({
+            where: { agentCount },
+            relations: { simConfigs: true, configuratorParams: true }
+        });
+    }
+
+    getSummary(): Promise<OrgConfigSummaryDTO[]> {
+        return this.dataSource.getRepository(OrgConfig)
+            .createQueryBuilder('orgConfig')
+            .select('orgConfig.agentCount', 'agentCount')
+            .addSelect('COUNT(DISTINCT orgConfig.id)', 'orgConfigCount')
+            .addSelect('AVG(simConfig.avgPerformance)', 'avgPerformance')
+            .addSelect('MAX(simConfig.avgPerformance)', 'bestPerformance')
+            .addSelect('STDDEV(simConfig.avgPerformance)', 'stdDevPerformance')
+            .leftJoin('orgConfig.simConfigs', 'simConfig')
+            .groupBy('orgConfig.agentCount')
+            .orderBy('orgConfig.agentCount', 'ASC')
+            .getRawMany();
     }
 
     delete(id: number): Promise<number> {

@@ -17,7 +17,7 @@ type SimConfigUpdate = Partial<
 @Injectable()
 export class ResultService {
     private _dev: boolean = false;
-    private _minRuns: number = 10;
+    private _minSimRuns: number = 10;
     private _convergenceMargin: number = 0.01;
     private _logger: Logger = new Logger(ResultService.name);
 
@@ -28,7 +28,7 @@ export class ResultService {
     ) {
         const env = environment();
         this._dev = env.root.dev;
-        this._minRuns = env.options.minRuns;
+        this._minSimRuns = env.options.minSimRuns;
         this._convergenceMargin = env.options.convergenceMargin;
     }
 
@@ -97,7 +97,7 @@ export class ResultService {
 
                     // check for convergence
                     let converged: boolean = false;
-                    if (update.runCount >= 2 && update.runCount >= this._minRuns) {
+                    if (update.runCount >= 2 && update.runCount >= this._minSimRuns) {
                         if (this._dev) this._logger.log("Checking convergence");
                         if (simConfig.stdDevPerformance > 0) {
                             const percentChange = Math.abs(
