@@ -1,7 +1,7 @@
 import { ApiProperty, PickType } from "@nestjs/swagger";
 import { ConvergenceTestDTO, OrgConfigDTO, ResultDTO, SimConfigDTO, SimSetDTO, StateType } from "aethon-arion-pipeline";
 import { Transform } from "class-transformer";
-import { IsDate, IsIn, IsInt, IsNumber, IsObject, IsOptional, IsString } from "class-validator";
+import { IsArray, IsDate, IsIn, IsInt, IsNumber, IsObject, IsOptional, IsString } from "class-validator";
 
 export class SimConfigDTOGet implements SimConfigDTO {
     @IsNumber()
@@ -34,6 +34,18 @@ export class SimConfigDTOGet implements SimConfigDTO {
         example: 1
     })
     runIndex?: number;
+
+    @IsOptional()
+    @IsArray()
+    @ApiProperty({
+        name: "seedKeys",
+        type: [Number],
+        required: false,
+        description:
+            "Set by GET /sim-config/next: keys for the run's random streams ([base seed, org config replicate, run index]); shared by the same replicate and run at every optimiser point (common random numbers)",
+        example: [0, 1, 1]
+    })
+    seedKeys?: number[];
 
     @IsObject()
     @ApiProperty({

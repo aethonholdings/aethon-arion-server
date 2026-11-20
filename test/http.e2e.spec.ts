@@ -51,7 +51,7 @@ describe("Node protocol over HTTP (e2e)", () => {
         expect(Number.isInteger(job.runIndex)).toBe(true);
 
         const result = await lastValueFrom(
-            C1.run$(job, RandomStreamFactory.seeded(job.id, job.runIndex), new Logger(), "http")
+            C1.run$(job, RandomStreamFactory.seeded(...job.seedKeys), new Logger(), "http")
         );
         const body = JSON.parse(JSON.stringify(result));
         const first = await request(app.getHttpServer()).post("/arion/result").send(body);
@@ -67,7 +67,7 @@ describe("Node protocol over HTTP (e2e)", () => {
         const next = await request(app.getHttpServer()).get("/arion/sim-config/next").query({ nodeId: "http" });
         const job = next.body.payload;
         const result = await lastValueFrom(
-            C1.run$(job, RandomStreamFactory.seeded(job.id, job.runIndex), new Logger(), "http")
+            C1.run$(job, RandomStreamFactory.seeded(...job.seedKeys), new Logger(), "http")
         );
         const body = { ...JSON.parse(JSON.stringify(result)), runId: 999999 };
         const response = await request(app.getHttpServer()).post("/arion/result").send(body);

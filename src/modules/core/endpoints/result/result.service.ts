@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import { DataSource, EntityManager, Repository } from "typeorm";
 import { Result, Run, SimConfig, StateSpacePoint } from "aethon-arion-db";
 import { withTransactionRetry } from "../../../../common/utils/transaction";
+import { ConvergenceCriteria, standardErrorConvergence } from "../../../../common/utils/convergence";
 import { Utils, ResultDTO, States, SimConfigDTO } from "aethon-arion-pipeline";
 import { ModelService } from "../../services/model/model.service";
 import environment from "../../../../../env/environment";
@@ -18,8 +19,7 @@ type SimConfigUpdate = Partial<
 @Injectable()
 export class ResultService {
     private _dev: boolean = false;
-    private _minSimRuns: number = 10;
-    private _convergenceMargin: number = 0.01;
+    private _criteria: ConvergenceCriteria;
     private _logger: Logger = new Logger(ResultService.name);
 
     constructor(
@@ -29,8 +29,12 @@ export class ResultService {
     ) {
         const env = environment();
         this._dev = env.root.dev;
-        this._minSimRuns = env.options.minSimRuns;
-        this._convergenceMargin = env.options.convergenceMargin;
+        this._criteria = {
+            minSamples: env.options.minSimRuns,
+            maxSamples: env.options.maxSimRuns ?? 1000,
+            relativeError: env.options.convergenceMargin,
+            absoluteError: env.options.convergenceAbsoluteError ?? 0
+        };
     }
 
     /**
@@ -120,7 +124,7 @@ export class ResultService {
                 .getRepository(Result)
                 .createQueryBuilder("result")
                 .select("AVG(result.performance)", "avgPerformance")
-                .addSelect("STDDEV(result.performance)", "stdDevPerformance")
+                .addSelect("STDDEV_SAMP(result.performance)", "stdDevPerformance")
                 .addSelect("COUNT(result.id)", "runCount")
                 .where("result.simConfigId = :simConfigId", { simConfigId: simConfig.id })
                 .andWhere("result.late = :late", { late: false })
@@ -131,21 +135,16 @@ export class ResultService {
                 runCount: Number(stats?.runCount ?? 0)
             };
 
-            // check for convergence
-            let converged: boolean = false;
-            if (update.runCount >= 2 && update.runCount >= this._minSimRuns) {
-                if (this._dev) this._logger.log("Checking convergence");
-                const previousStdDev: number = Number(simConfig.stdDevPerformance ?? 0);
-                const currentStdDev: number = Number(update.stdDevPerformance ?? 0);
-                if (previousStdDev > 0) {
-                    const percentChange = Math.abs((currentStdDev - previousStdDev) / previousStdDev);
-                    converged = percentChange < this._convergenceMargin;
-                } else {
-                    // a zero baseline cannot be used as a relative denominator; only a dispersion that is
-                    // still zero (identical outcomes across all runs) counts as converged
-                    converged = currentStdDev === 0;
-                }
-            }
+            // check for convergence: standard error of the mean performance within tolerance (or the run cap)
+            const decision = standardErrorConvergence(
+                update.runCount,
+                update.avgPerformance,
+                update.stdDevPerformance,
+                this._criteria
+            );
+            const converged: boolean = decision.converged;
+            if (decision.capped)
+                this._logger.warn(`SimConfig ${simConfig.id} stopped at the run cap (${update.runCount} runs)`);
             if (converged) {
                 if (this._dev) this._logger.log("Simulation converged. Marking as complete.");
                 update.state = States.COMPLETED;

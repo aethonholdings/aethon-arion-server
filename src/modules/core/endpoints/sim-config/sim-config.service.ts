@@ -14,6 +14,7 @@ import { ModelService } from "../../services/model/model.service";
 import environment from "../../../../../env/environment";
 import { Paginated, Paginator } from "aethon-nestjs-paginate";
 import { ConvergenceTestService } from "../../services/convergence-test/convergence-test.service";
+import { OrgConfigService } from "../org-config/org-config.service";
 
 @Injectable()
 export class SimConfigService {
@@ -24,6 +25,7 @@ export class SimConfigService {
     constructor(
         private dataSource: DataSource,
         private convergenceTestService: ConvergenceTestService,
+        private orgConfigService: OrgConfigService,
         private modelService: ModelService
     ) {
         const env = environment();
@@ -103,7 +105,16 @@ export class SimConfigService {
                 `Convergence test touch failed after dispatching simConfig ${simConfig.id}: ${error?.message || error}`
             );
         }
-        return { ...simConfig, runId: dispatched.runId, runIndex: dispatched.runIndex } as SimConfigDTO;
+        // random stream keys: run j of org config replicate k uses the same streams at every optimiser point
+        // (common random numbers); older org configs without a replicate index get distinct, non-shared keys
+        const baseSeed: number = await this.orgConfigService.baseSeed(simConfig.simConfigParamsId);
+        const replicate: number = simConfig.orgConfig?.replicate ?? 1000000 + simConfig.orgConfigId;
+        return {
+            ...simConfig,
+            runId: dispatched.runId,
+            runIndex: dispatched.runIndex,
+            seedKeys: [baseSeed, replicate, dispatched.runIndex]
+        } as SimConfigDTO;
     }
 
     findOne(id: number): Promise<SimConfigDTO> {

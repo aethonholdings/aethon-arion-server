@@ -22,9 +22,12 @@ export default () =>
         },
         options: {
             storeStateSpace: true,
-            convergenceMargin: 0.001,
+            convergenceMargin: 0.01, // target standard error of the mean as a fraction of |mean|
+            convergenceAbsoluteError: 0,
             minOrgConfigs: 10,
+            maxOrgConfigs: 200,
             minSimRuns: 10,
+            maxSimRuns: 1000,
             randomStreamType: "random",
             simulationDays: 100,
             // this following casting is an inexplicable issue with Typescript compilation on inheritance with protected variables

@@ -1,5 +1,6 @@
 import environment from "../../../../../env/environment";
 import { SimConfigParams, SimSet } from "aethon-arion-db";
+import { newBaseSeed } from "../../../../common/utils/convergence";
 import {
     ConfiguratorParamData,
     Model,
@@ -98,7 +99,7 @@ export class SimSetService {
                     .createQueryBuilder()
                     .insert()
                     .into(SimConfigParams)
-                    .values(requested)
+                    .values({ ...requested, seed: newBaseSeed(requested.randomStreamType) })
                     .orIgnore()
                     .execute()
                     .then(() =>

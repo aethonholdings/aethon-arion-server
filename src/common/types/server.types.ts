@@ -32,9 +32,12 @@ export type ServerEnvironment = {
 
 export type ArionOptions = {
     storeStateSpace: boolean;
-    convergenceMargin: number;
+    convergenceMargin: number; // target standard error of the mean as a fraction of |mean| (e.g. 0.01)
+    convergenceAbsoluteError?: number; // absolute standard error floor, for means near 0 (default 0)
     minOrgConfigs: number;
+    maxOrgConfigs?: number; // cap on org configs per convergence test (default 200)
     minSimRuns: number;
+    maxSimRuns?: number; // cap on runs per simConfig (default 1000)
     randomStreamType: "static" | "random";
     simulationDays: number;
     models: Model[];

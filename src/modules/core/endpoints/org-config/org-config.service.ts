@@ -1,4 +1,5 @@
-import { OrgConfig, SimConfig } from "aethon-arion-db";
+import { OrgConfig, SimConfig, SimConfigParams } from "aethon-arion-db";
+import { newBaseSeed, orgConfigSeed } from "../../../../common/utils/convergence";
 import { ConfiguratorParamData, ConfiguratorParamsDTO, OrgConfigDTO } from "aethon-arion-pipeline";
 import { OrgConfigSummaryDTO } from "src/common/dto/org-config.dto";
 import { Injectable, Logger } from "@nestjs/common";
@@ -33,19 +34,46 @@ export class OrgConfigService {
             .find({ where: { configuratorParams: { modelName: type } }, relations: { configuratorParams: true } });
     }
 
-    create(
+    /**
+     * Generates and stores an org config. With a replicate index, the configurator's random draws are seeded from
+     * (base seed, replicate), so replicate k of every optimiser point shares its draws (common random numbers).
+     */
+    async create(
         configuratorParamsDTO: ConfiguratorParamsDTO<ConfiguratorParamData>,
-        tEntityManager?: EntityManager
+        tEntityManager?: EntityManager,
+        replicate?: number,
+        baseSeed?: number
     ): Promise<OrgConfig> {
         if (!tEntityManager) tEntityManager = this.dataSource.createEntityManager();
         const model = this.modelService.getModel(configuratorParamsDTO.modelName);
         const configuratorName = configuratorParamsDTO.configuratorName || model.getDefaultConfigurator().name;
+        const seed: number | undefined = replicate !== undefined ? orgConfigSeed(baseSeed, replicate) : undefined;
         return tEntityManager.getRepository(OrgConfig).save({
-            ...model.getConfigurator(configuratorName).generate(configuratorParamsDTO),
+            ...model.getConfigurator(configuratorName).generate(configuratorParamsDTO, seed),
+            replicate: replicate ?? null,
             simConfigs: [],
             configuratorParams: configuratorParamsDTO,
             type: model.name
         });
+    }
+
+    /**
+     * The base seed of the simulation parameters, assigned on first use (0 for "static", a random draw for
+     * "random"); a conditional update keeps concurrent first uses consistent.
+     */
+    async baseSeed(simConfigParamsId: number, tEntityManager?: EntityManager): Promise<number> {
+        if (!tEntityManager) tEntityManager = this.dataSource.createEntityManager();
+        const repository = tEntityManager.getRepository(SimConfigParams);
+        const params: SimConfigParams = await repository.findOneByOrFail({ id: simConfigParamsId });
+        if (params.seed !== null && params.seed !== undefined) return params.seed;
+        await repository
+            .createQueryBuilder()
+            .update(SimConfigParams)
+            .set({ seed: newBaseSeed(params.randomStreamType) })
+            .where("id = :id", { id: simConfigParamsId })
+            .andWhere("seed IS NULL")
+            .execute();
+        return (await repository.findOneByOrFail({ id: simConfigParamsId })).seed;
     }
 
     findRunning(): Promise<OrgConfigDTO[]> {

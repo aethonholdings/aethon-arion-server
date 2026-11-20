@@ -14,13 +14,14 @@ import { OrgConfigService } from "../../endpoints/org-config/org-config.service"
 import { SimConfigService } from "../../endpoints/sim-config/sim-config.service";
 import { ModelService } from "../model/model.service";
 import { OptimiserStateService } from "../../endpoints/optimiser-state/optimiser-state.service";
+import { ConvergenceCriteria, standardErrorConvergence } from "../../../../common/utils/convergence";
 
 @Injectable()
 export class ConvergenceTestService {
     private _logger: Logger = new Logger(ConvergenceTestService.name);
     private _dev: boolean = false;
     private _env: ServerEnvironment = environment();
-    private _convergenceMargin: number;
+    private _criteria: ConvergenceCriteria;
 
     constructor(
         private dataSource: DataSource,
@@ -30,7 +31,12 @@ export class ConvergenceTestService {
         private optimiserService: OptimiserStateService
     ) {
         this._dev = this._env.root.dev;
-        this._convergenceMargin = this._env.options.convergenceMargin || 0.01;
+        this._criteria = {
+            minSamples: this._env.options.minOrgConfigs,
+            maxSamples: this._env.options.maxOrgConfigs ?? 200,
+            relativeError: this._env.options.convergenceMargin || 0.01,
+            absoluteError: this._env.options.convergenceAbsoluteError ?? 0
+        };
     }
 
     async create(
@@ -147,9 +153,13 @@ export class ConvergenceTestService {
                                         `Generating orgConfigs and simConfigs against the convergence test`
                                     );
                                 // create the required number of orgConfigs
+                                const baseSeed: number = await this.orgConfigService.baseSeed(
+                                    simConfigParamsDTO.id,
+                                    tEntityManager
+                                );
                                 for (let i = 0; i < orgConfigCountMin; i++) {
                                     await this.orgConfigService
-                                        .create(convergenceTest.configuratorParams, tEntityManager)
+                                        .create(convergenceTest.configuratorParams, tEntityManager, i + 1, baseSeed)
                                         .then((orgConfig: OrgConfig) =>
                                             this.simConfigService.create(
                                                 convergenceTest.simConfigParams,
@@ -207,7 +217,7 @@ export class ConvergenceTestService {
                     .getRepository(SimConfig)
                     .createQueryBuilder("simConfig")
                     .select("AVG(simConfig.avgPerformance)", "avgPerformance")
-                    .addSelect("STDDEV(simConfig.avgPerformance)", "stdDevPerformance")
+                    .addSelect("STDDEV_SAMP(simConfig.avgPerformance)", "stdDevPerformance")
                     .addSelect("COUNT(DISTINCT simConfig.orgConfigId)", "orgConfigCount")
                     .addSelect("COUNT(DISTINCT simConfig.id)", "simConfigCount")
                     .addSelect(`SUM(IF(simConfig.state = "${States.COMPLETED}", 1, 0))`, "completedSimConfigCount")
@@ -248,63 +258,40 @@ export class ConvergenceTestService {
                                 // a single deterministic orgConfig: the simConfig-level convergence is sufficient
                                 converged = true;
                             } else {
-                                // the stored stdDev is the estimate from the previous fully completed set of
-                                // simConfigs (stats are only persisted when all simConfigs are complete, see below)
-                                const previousStdDev: number | null =
-                                    convergenceTest.stdDevPerformance === null ||
-                                    convergenceTest.stdDevPerformance === undefined
-                                        ? null
-                                        : Number(convergenceTest.stdDevPerformance);
-                                const currentStdDev: number = simConfigSet.stdDevPerformance ?? 0;
-                                if (previousStdDev === null) {
-                                    // no baseline yet: record this estimate and add an orgConfig to compare against
-                                    converged = false;
-                                } else if (previousStdDev === 0) {
-                                    // a zero baseline cannot be used as a relative denominator; only a still zero
-                                    // dispersion counts as converged
-                                    converged = currentStdDev === 0;
-                                } else {
-                                    const percentChange = Math.abs((currentStdDev - previousStdDev) / previousStdDev);
-                                    converged = percentChange < this._convergenceMargin;
-                                }
-                                // if we have not converged, we will need to generate more simulations to tighten the
-                                // distribution of results
+                                // standard-error rule over the org config means: the sample of org configs is large
+                                // enough once the standard error of the mean performance is within tolerance
+                                const decision = standardErrorConvergence(
+                                    simConfigSet.orgConfigCount,
+                                    simConfigSet.avgPerformance,
+                                    simConfigSet.stdDevPerformance,
+                                    this._criteria
+                                );
+                                converged = decision.converged;
+                                if (decision.capped)
+                                    this._logger.warn(
+                                        `ConvergenceTest ${convergenceTestId} stopped at the org config cap (${simConfigSet.orgConfigCount})`
+                                    );
+                                // if we have not converged, add one more org config (the next replicate, so that it
+                                // shares its random draws with the same replicate of every other optimiser point)
                                 if (!converged) {
                                     if (this._dev)
                                         this._logger.log(
                                             "Convergence test not converged and requires more simConfig generation"
                                         );
-                                    // generate a new orgconfig
-                                    const configuratorParams = convergenceTest.configuratorParams;
-                                    const model = this.modelService.getModel(configuratorParams.modelName);
-                                    const configuratorName = configuratorParams.configuratorName;
-                                    await tEntityManager
-                                        .getRepository(OrgConfig)
-                                        .save({
-                                            ...model.getConfigurator(configuratorName).generate(configuratorParams),
-                                            simConfigs: [],
-                                            configuratorName: configuratorName,
-                                            configuratorParams: configuratorParams,
-                                            type: model.name
-                                        })
-                                        .then((orgConfig) => {
-                                            simConfigSet.orgConfigCount++;
-                                            // generate a new simConfig against the new orgConfig
-                                            return tEntityManager
-                                                .getRepository(SimConfig)
-                                                .save({
-                                                    orgConfig: orgConfig,
-                                                    convergenceTest: convergenceTest,
-                                                    state: States.PENDING,
-                                                    runCount: 0,
-                                                    dispatchedRuns: 0,
-                                                    saveStateSpace: this._env.options.storeStateSpace === true,
-                                                    simConfigParams: convergenceTest.simConfigParams,
-                                                    days: convergenceTest.simConfigParams.days,
-                                                    randomStreamType: convergenceTest.simConfigParams.randomStreamType
-                                                })
-                                                .then(() => simConfigSet.simConfigCount++);
-                                        });
+                                    const orgConfig: OrgConfig = await this.orgConfigService.create(
+                                        convergenceTest.configuratorParams,
+                                        tEntityManager,
+                                        simConfigSet.orgConfigCount + 1,
+                                        await this.orgConfigService.baseSeed(convergenceTest.simConfigParams.id, tEntityManager)
+                                    );
+                                    simConfigSet.orgConfigCount++;
+                                    await this.simConfigService.create(
+                                        convergenceTest.simConfigParams,
+                                        orgConfig,
+                                        convergenceTest,
+                                        tEntityManager
+                                    );
+                                    simConfigSet.simConfigCount++;
                                 }
                             }
                         }

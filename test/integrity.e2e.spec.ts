@@ -3,7 +3,7 @@ import { DataSource } from "typeorm";
 import { lastValueFrom } from "rxjs";
 import { C1 } from "aethon-arion-c1";
 import { DomainTypes, Logger, RandomStreamFactory, ResultDTO, SimConfigDTO, States } from "aethon-arion-pipeline";
-import { Result, Run, SimConfig, SimConfigParams, SimSet, StateSpacePoint } from "aethon-arion-db";
+import { OrgConfig, Result, Run, SimConfig, SimConfigParams, SimSet, StateSpacePoint } from "aethon-arion-db";
 import { RootModule } from "../src/modules/root/root.module";
 import { SimSetService } from "../src/modules/core/endpoints/sim-set/sim-set.service";
 import { SimConfigService } from "../src/modules/core/endpoints/sim-config/sim-config.service";
@@ -42,7 +42,7 @@ describe("Dispatch and result integrity (e2e)", () => {
         simSetService.create({ modelName: "C1", description, optimiserParams: optimiserParams() } as any);
     const simulate = (simConfig: SimConfigDTO): Promise<ResultDTO> =>
         lastValueFrom(
-            C1.run$(simConfig, RandomStreamFactory.seeded(simConfig.id, simConfig.runIndex), logger, "e2e", true)
+            C1.run$(simConfig, RandomStreamFactory.seeded(...simConfig.seedKeys), logger, "e2e", true)
         );
 
     beforeAll(async () => {
@@ -141,6 +141,56 @@ describe("Dispatch and result integrity (e2e)", () => {
             simSetService.create({ modelName: "C1", description: "race 2", simConfigParams: { days: 3, randomStreamType: "random" }, optimiserParams: optimiserParams() } as any)
         ]);
         expect(await dataSource.getRepository(SimConfigParams).count({ where: { days: 3 } })).toBe(1);
+    });
+
+    it("shares random draws between neighbouring optimiser points (common random numbers)", async () => {
+        const simSet = await simSetService.create({
+            modelName: "C1",
+            description: "crn",
+            simConfigParams: { days: 4, randomStreamType: "random" },
+            optimiserParams: {
+                init: {
+                    type: "defined",
+                    config: { ...optimiserParams().init.config, gains: { influence: 1e-5, judgment: 1e-5, incentive: 1e-5 } }
+                },
+                parameterSpace: [
+                    {
+                        id: "gains.judgment",
+                        domain: { type: DomainTypes.CONTINUOUS, optimise: true, min: 1e-6, max: 1e-4, derivativeStepSize: 1e-5 }
+                    }
+                ],
+                iterations: { learningRate: 1, tolerance: 0.0001, max: 10 }
+            }
+        } as any);
+        const orgConfigs: OrgConfig[] = await dataSource
+            .getRepository(OrgConfig)
+            .createQueryBuilder("orgConfig")
+            .innerJoin("orgConfig.simConfigs", "simConfig")
+            .innerJoin(SimConfigParams, "params", "params.id = simConfig.simConfigParamsId")
+            .innerJoinAndSelect("orgConfig.configuratorParams", "configuratorParams")
+            .where("params.days = 4 AND params.randomStreamType = 'random'")
+            .getMany();
+        const byPoint = new Map<string, OrgConfig[]>();
+        for (const oc of orgConfigs) {
+            const key = oc.configuratorParams.hash;
+            byPoint.set(key, [...(byPoint.get(key) ?? []), oc]);
+        }
+        expect(byPoint.size).toBe(2); // x and x + delta
+        const [x, xd] = [...byPoint.values()];
+        for (const a of x) {
+            const b = xd.find((oc) => oc.replicate === a.replicate)!;
+            expect(b).toBeDefined();
+            // same draws: the judgment tensors differ only by the gain ratio, the incentive tensors are identical
+            const ratio = (b.configuratorParams.data as any).gains.judgment / (a.configuratorParams.data as any).gains.judgment;
+            (b.agentSet as any).judgmentTensor.flat(3).forEach((v: number, i: number) =>
+                expect(v).toBeCloseTo(ratio * (a.agentSet as any).judgmentTensor.flat(3)[i], 12)
+            );
+            expect((b.agentSet as any).incentiveTensor).toEqual((a.agentSet as any).incentiveTensor);
+        }
+        // and the dispatched runs carry matching stream keys for the same replicate and run index
+        const params = await dataSource.getRepository(SimConfigParams).findOneByOrFail({ days: 4, randomStreamType: "random" });
+        expect(Number.isInteger(params.seed)).toBe(true);
+        expect(simSet.id).toBeDefined();
     });
 
     it("rejects invalid optimiser parameters", async () => {

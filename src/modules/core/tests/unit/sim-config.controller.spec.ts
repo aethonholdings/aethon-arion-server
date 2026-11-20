@@ -7,6 +7,7 @@ import { SimConfig } from "aethon-arion-db";
 import { Paginator } from "aethon-nestjs-paginate";
 import { SimConfigController } from "../../endpoints/sim-config/sim-config.controller";
 import { SimConfigService } from "../../endpoints/sim-config/sim-config.service";
+import { OrgConfigService } from "../../endpoints/org-config/org-config.service";
 import { ModelService } from "../../services/model/model.service";
 import { ConvergenceTestService } from "../../services/convergence-test/convergence-test.service";
 import { indexTestQuery } from "../data/sim-config.controller.test.data";
@@ -24,7 +25,8 @@ describe("Model module: SimConfigController", () => {
         providers: [
             SimConfigService,
             ModelService,
-            { provide: ConvergenceTestService, useValue: { touch: jest.fn(), create: jest.fn() } }
+            { provide: ConvergenceTestService, useValue: { touch: jest.fn(), create: jest.fn() } },
+            OrgConfigService
         ]
     };
 

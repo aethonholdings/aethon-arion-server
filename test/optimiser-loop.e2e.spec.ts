@@ -98,7 +98,7 @@ describe("Optimiser loop (e2e)", () => {
         for (let i = 0; i < 5000; i++) {
             const simConfig: SimConfigDTO = await simConfigService.next("e2e");
             if (!simConfig) break;
-            const result = await lastValueFrom(C1.run$(simConfig, RandomStreamFactory.seeded(simConfig.id, simConfig.runIndex), logger, "e2e"));
+            const result = await lastValueFrom(C1.run$(simConfig, RandomStreamFactory.seeded(...simConfig.seedKeys), logger, "e2e"));
             await resultService.create(result);
             const states = await optimiserStates.count({ where: { simSet: { id: simSetId } } });
             const simSet = await dataSource.getRepository(SimSet).findOneByOrFail({ id: simSetId });
@@ -130,14 +130,21 @@ describe("Optimiser loop (e2e)", () => {
             );
         expect(reused).toBe(true);
 
-        // a converged multi-orgConfig test must have a baseline from minOrgConfigs plus at least one more orgConfig
+        // every converged multi-orgConfig test satisfies the stopping rule
         const tests = await dataSource
             .getRepository(ConvergenceTest)
             .find({ where: { converged: true }, relations: { configuratorParams: true } });
         expect(tests.length).toBeGreaterThan(0);
         for (const test of tests) {
             if (test.configuratorParams.multipleOrgConfigs) {
-                expect(test.orgConfigCount).toBeGreaterThan(env.options.minOrgConfigs);
+                // standard-error rule: at least the minimum sample, and SE of the mean within tolerance (or capped)
+                expect(test.orgConfigCount).toBeGreaterThanOrEqual(env.options.minOrgConfigs);
+                const se = (test.stdDevPerformance ?? 0) / Math.sqrt(test.orgConfigCount);
+                const tolerance = Math.max(
+                    env.options.convergenceMargin * Math.abs(test.avgPerformance ?? 0),
+                    env.options.convergenceAbsoluteError ?? 0
+                );
+                expect(se <= tolerance + 1e-9 || test.orgConfigCount >= (env.options.maxOrgConfigs ?? 200)).toBe(true);
             }
             expect(test.completedSimConfigCount).toBe(test.simConfigCount);
         }
