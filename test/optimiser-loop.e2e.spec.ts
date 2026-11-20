@@ -98,7 +98,7 @@ describe("Optimiser loop (e2e)", () => {
         for (let i = 0; i < 5000; i++) {
             const simConfig: SimConfigDTO = await simConfigService.next("e2e");
             if (!simConfig) break;
-            const result = await lastValueFrom(C1.run$(simConfig, new RandomStreamFactory(), logger, "e2e"));
+            const result = await lastValueFrom(C1.run$(simConfig, RandomStreamFactory.seeded(simConfig.id, simConfig.runIndex), logger, "e2e"));
             await resultService.create(result);
             const states = await optimiserStates.count({ where: { simSet: { id: simSetId } } });
             const simSet = await dataSource.getRepository(SimSet).findOneByOrFail({ id: simSetId });

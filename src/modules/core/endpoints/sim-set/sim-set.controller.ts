@@ -1,7 +1,7 @@
-import { Body, Controller, Delete, Get, Param, Post, Query } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, Query, ParseIntPipe, ValidationPipe } from "@nestjs/common";
 import { SimSetService } from "./sim-set.service";
 import { ApiBody, ApiOkResponse, ApiParam, ApiTags } from "@nestjs/swagger";
-import { SimSetDTOCreate, SimSetDTOGet } from "../../../../common/dto/sim-set.dto";
+import { SimSetDTOCreate, SimSetDTOGet, SimSetQueryDTO } from "../../../../common/dto/sim-set.dto";
 
 @Controller("sim-set")
 @ApiTags("SimSet")
@@ -15,7 +15,10 @@ export class SimSetController {
         isArray: true,
         description: "An array of all simulation sets, subject to a query filter"
     })
-    index(@Query() query?: any): Promise<SimSetDTOGet[]> {
+    index(
+        @Query(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
+        query: SimSetQueryDTO
+    ): Promise<SimSetDTOGet[]> {
         return this.simSetService.findAll(query) as Promise<SimSetDTOGet[]>;
     }
 
@@ -23,7 +26,7 @@ export class SimSetController {
     @Get(":id")
     @ApiParam({ name: "id", type: Number, description: "The unique identifier of the simulation set", example: 1 })
     @ApiOkResponse({ type: SimSetDTOCreate, description: "The details of the simulation set" })
-    view(@Param("id") id: number): Promise<SimSetDTOCreate> {
+    view(@Param("id", ParseIntPipe) id: number): Promise<SimSetDTOCreate> {
         return this.simSetService.findOne(id) as Promise<SimSetDTOCreate>;
     }
 
@@ -47,7 +50,7 @@ export class SimSetController {
         example: 1
     })
     @ApiOkResponse({ type: Number, description: "The ID of the simulation set deleted" })
-    delete(@Param("id") id: number): Promise<number> {
+    delete(@Param("id", ParseIntPipe) id: number): Promise<number> {
         return this.simSetService.delete(id);
     }
 }

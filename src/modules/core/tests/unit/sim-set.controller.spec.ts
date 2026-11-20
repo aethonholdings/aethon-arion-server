@@ -36,7 +36,7 @@ describe("Model module: SimSetController", () => {
     });
 
     it("returns all sim sets", async () => {
-        const result = await controller.index();
+        const result = await controller.index({});
         expect(result).toBeInstanceOf(Array<SimSet>);
     });
 

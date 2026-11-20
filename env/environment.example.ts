@@ -12,7 +12,9 @@ export default () =>
             username: "arion",
             password: "*******",
             database: "arion",
-            synchronize: false
+            synchronize: false,
+            purgeOnStart: false,
+            migrationsRun: true
         },
         redis: {
             url: "redis://***.***.***.***:6379",

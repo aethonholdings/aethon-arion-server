@@ -144,3 +144,16 @@ export class SimSetDTOCreate extends PickType(SimSetDTOGet, [
     @IsOptional()
     modelParams: ModelParamsDTO;
 }
+
+/** Accepted query parameters for GET /sim-set; anything else is rejected. */
+export class SimSetQueryDTO {
+    @IsOptional()
+    @IsIn(["running", "pending", "completed", "failed"])
+    @ApiProperty({ name: "state", type: String, required: false, description: "Filter by state", example: "running" })
+    state?: StateType;
+
+    @IsOptional()
+    @IsString()
+    @ApiProperty({ name: "modelName", type: String, required: false, description: "Filter by model", example: "C1" })
+    modelName?: string;
+}

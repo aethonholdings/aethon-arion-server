@@ -182,6 +182,14 @@ export class ConvergenceTestService {
 
     async touch(convergenceTestId: number, tEntityManager?: EntityManager): Promise<ConvergenceTest> {
         if (!tEntityManager) tEntityManager = this.dataSource.createEntityManager();
+        // lock the convergence test row before reading the simConfig aggregates: two transactions completing the
+        // last simConfigs of the same test are serialised, and the second one sees the first one's commit (see
+        // withTransactionRetry for the isolation level). Requires a transaction.
+        await tEntityManager.getRepository(ConvergenceTest).findOneOrFail({
+            where: { id: convergenceTestId },
+            lock: { mode: "pessimistic_write" },
+            loadEagerRelations: false
+        });
         // fetch the convergence test
         return tEntityManager
             .getRepository(ConvergenceTest)
@@ -290,6 +298,7 @@ export class ConvergenceTestService {
                                                     state: States.PENDING,
                                                     runCount: 0,
                                                     dispatchedRuns: 0,
+                                                    saveStateSpace: this._env.options.storeStateSpace === true,
                                                     simConfigParams: convergenceTest.simConfigParams,
                                                     days: convergenceTest.simConfigParams.days,
                                                     randomStreamType: convergenceTest.simConfigParams.randomStreamType
@@ -324,7 +333,11 @@ export class ConvergenceTestService {
                     })
                     .then(async (convergenceTest: ConvergenceTest) => {
                         // the convergence test is saved, now touch all optimiser states related to it
+                        // only active optimiser states are touched: re-touching a completed state would make it
+                        // step again, find its successor's tests already created and wrongly end the SimSet
                         for (let optimiserState of convergenceTest.optimiserStates) {
+                            if (optimiserState.status === States.COMPLETED || optimiserState.status === States.FAILED)
+                                continue;
                             await this.optimiserService.touch(optimiserState.id, tEntityManager);
                         }
                         return convergenceTest;

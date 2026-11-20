@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Query } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, Query, ParseIntPipe } from "@nestjs/common";
 import { OrgConfigService } from "./org-config.service";
 import { ApiBody, ApiOkResponse, ApiParam, ApiQuery, ApiTags } from "@nestjs/swagger";
 import { ConfiguratorParamsDTOCreate } from "../../../../common/dto/configurator-param.dto";
@@ -51,7 +51,7 @@ export class OrgConfigController {
         isArray: true,
         description: "All OrgConfig objects with the specified agent count, including their SimConfigs"
     })
-    byAgentCount(@Param("agentCount") agentCount: number): Promise<OrgConfigDTOGet[]> {
+    byAgentCount(@Param("agentCount", ParseIntPipe) agentCount: number): Promise<OrgConfigDTOGet[]> {
         return this.orgConfigService.findByAgentCount(agentCount) as Promise<OrgConfigDTOGet[]>;
     }
 
@@ -78,7 +78,7 @@ export class OrgConfigController {
         type: OrgConfigDTOGet,
         description: "The OrgConfig object matching the specified ID"
     })
-    view(@Param("id") id: number): Promise<OrgConfigDTOGet> {
+    view(@Param("id", ParseIntPipe) id: number): Promise<OrgConfigDTOGet> {
         return this.orgConfigService.findOne(id) as Promise<OrgConfigDTOGet>;
     }
 
@@ -109,7 +109,7 @@ export class OrgConfigController {
         description: "The ID of the OrgConfig deleted",
         example: 1
     })
-    delete(@Param("id") id: number): Promise<number> {
+    delete(@Param("id", ParseIntPipe) id: number): Promise<number> {
         return this.orgConfigService.delete(id);
     }
 }

@@ -1,7 +1,7 @@
 import { ApiProperty, PickType } from "@nestjs/swagger";
 import { ConvergenceTestDTO, OrgConfigDTO, ResultDTO, SimConfigDTO, SimSetDTO, StateType } from "aethon-arion-pipeline";
 import { Transform } from "class-transformer";
-import { IsDate, IsIn, IsNumber, IsObject, IsOptional, IsString } from "class-validator";
+import { IsDate, IsIn, IsInt, IsNumber, IsObject, IsOptional, IsString } from "class-validator";
 
 export class SimConfigDTOGet implements SimConfigDTO {
     @IsNumber()
@@ -12,6 +12,28 @@ export class SimConfigDTOGet implements SimConfigDTO {
         example: 1
     })
     id: number;
+
+    @IsOptional()
+    @IsInt()
+    @ApiProperty({
+        name: "runId",
+        type: Number,
+        required: false,
+        description: "Set by GET /sim-config/next: the dispatch ticket to post back with the result",
+        example: 1
+    })
+    runId?: number;
+
+    @IsOptional()
+    @IsInt()
+    @ApiProperty({
+        name: "runIndex",
+        type: Number,
+        required: false,
+        description: "Set by GET /sim-config/next: 1-based index of the dispatched run, used to seed random streams",
+        example: 1
+    })
+    runIndex?: number;
 
     @IsObject()
     @ApiProperty({

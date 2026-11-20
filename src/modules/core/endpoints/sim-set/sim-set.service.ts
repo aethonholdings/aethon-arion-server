@@ -7,9 +7,10 @@ import {
     OptimiserData,
     OptimiserParameters,
     SimSetDTO,
-    States
+    States,
+    StateType
 } from "aethon-arion-pipeline";
-import { Injectable, Logger } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import { And, DataSource, EntityManager, In, Not } from "typeorm";
 import { ModelService } from "../../services/model/model.service";
 import { SimSetDTOCreate } from "../../../../common/dto/sim-set.dto";
@@ -35,8 +36,18 @@ export class SimSetService {
         // await this.touch();
     }
 
-    findAll(query: any): Promise<SimSetDTO[]> {
-        return this.dataSource.getRepository(SimSet).find(query);
+    /**
+     * Lists SimSets, optionally filtered by state and model. Only whitelisted filters are accepted (the raw query
+     * string used to be passed to TypeORM find(), so clients could request arbitrary relations); relations are not
+     * loaded (use GET /sim-set/:id for the full tree).
+     */
+    findAll(query: { state?: StateType; modelName?: string } = {}): Promise<SimSetDTO[]> {
+        const where: { state?: StateType; modelName?: string } = {};
+        if (query?.state) where.state = query.state;
+        if (query?.modelName) where.modelName = query.modelName;
+        return this.dataSource
+            .getRepository(SimSet)
+            .find({ where: where, loadEagerRelations: false, order: { id: "DESC" } });
     }
 
     findOne(id: number): Promise<SimSetDTO> {
@@ -57,7 +68,7 @@ export class SimSetService {
         });
     }
 
-    create(simSetDTO: SimSetDTOCreate): Promise<SimSetDTO> {
+    async create(simSetDTO: SimSetDTOCreate): Promise<SimSetDTO> {
         const model: Model = this.modelService.getModel(
             simSetDTO.modelName
         );
@@ -66,29 +77,33 @@ export class SimSetService {
             simSetDTO.optimiserName || model.getDefaultOptimiser().name
         );
 
+        // reject invalid optimiser parameters before anything is written
+        const errors: string[] = optimiser.validateParameters(simSetDTO.optimiserParams);
+        if (errors.length > 0) {
+            throw new BadRequestException(`Invalid optimiser parameters: ${errors.join("; ")}`);
+        }
+
         if (model) {
             // start a transaction to save the sim set
             return this.dataSource.transaction(async (tEntityManager: EntityManager) => {
                 // find the SimConfigParams or initialise them to default
+                // the requested parameters, falling back to the environment defaults
+                const requested = {
+                    randomStreamType: simSetDTO?.simConfigParams?.randomStreamType || this._env.options.randomStreamType,
+                    days: simSetDTO?.simConfigParams?.days || this._env.options.simulationDays
+                };
+                // insert-if-absent inside the transaction; the (days, randomStreamType) unique key makes concurrent
+                // creates converge on one row instead of failing with a duplicate-key error
                 return tEntityManager
-                    .getRepository(SimConfigParams)
-                    .findOne({
-                        where: {
-                            randomStreamType:
-                                simSetDTO?.simConfigParams?.randomStreamType || this._env.options.randomStreamType,
-                            days: simSetDTO?.simConfigParams?.days || this._env.options.simulationDays
-                        }
-                    })
-                    .then((simConfigParams: SimConfigParams) => {
-                        if (!simConfigParams) {
-                            return this.dataSource.getRepository(SimConfigParams).save({
-                                days: this._env.options.simulationDays,
-                                randomStreamType: this._env.options.randomStreamType
-                            });
-                        } else {
-                            return simConfigParams;
-                        }
-                    })
+                    .createQueryBuilder()
+                    .insert()
+                    .into(SimConfigParams)
+                    .values(requested)
+                    .orIgnore()
+                    .execute()
+                    .then(() =>
+                        tEntityManager.getRepository(SimConfigParams).findOneOrFail({ where: requested })
+                    )
                     .then((simConfigParams: SimConfigParams) => {
                         if (this._dev) this._logger.log(`SimConfigParams ${simConfigParams.id} found`);
                         // Create the SimSet with an empty optimiserStates array

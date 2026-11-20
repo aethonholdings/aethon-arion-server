@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param } from "@nestjs/common";
+import { Controller, Get, Post, Body, Param, ParseIntPipe } from "@nestjs/common";
 import { ResultService } from "./result.service";
 import { ResultDTO } from "aethon-arion-pipeline";
 import { ApiBody, ApiOkResponse, ApiParam, ApiQuery, ApiTags } from "@nestjs/swagger";
@@ -39,7 +39,7 @@ export class ResultController {
         type: ResultDTOGet,
         description: "The result object retrieved by ID"
     })
-    view(@Param("id") id: string): Promise<ResultDTOGet> {
+    view(@Param("id", ParseIntPipe) id: number): Promise<ResultDTOGet> {
         return this.resultService.findOne(+id) as Promise<ResultDTOGet>;
     }
 

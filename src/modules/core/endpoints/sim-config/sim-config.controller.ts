@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, Req } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, Query, Req, ParseIntPipe } from "@nestjs/common";
 import { SimConfigService } from "./sim-config.service";
 import { ApiBody, ApiOkResponse, ApiParam, ApiQuery, ApiTags } from "@nestjs/swagger";
 import { SimConfigDTOCreate, SimConfigDTOGet } from "../../../../common/dto/sim-config.dto";
@@ -55,7 +55,7 @@ export class SimConfigController {
         type: SimConfigDTOGet,
         description: "The SimConfig object fetched by ID"
     })
-    view(@Param("id") id: number): Promise<SimConfigDTOGet> {
+    view(@Param("id", ParseIntPipe) id: number): Promise<SimConfigDTOGet> {
         return this.simConfigService.findOne(id) as Promise<SimConfigDTOGet>;
     }
 
@@ -72,7 +72,7 @@ export class SimConfigController {
         isArray: true,
         description: "An array of Result objects for the specified simulation configuration"
     })
-    results(@Param("id") id: number): Promise<ResultDTOGet[]> {
+    results(@Param("id", ParseIntPipe) id: number): Promise<ResultDTOGet[]> {
         return this.simConfigService.findResults(id) as Promise<ResultDTOGet[]>;
     }
 
@@ -88,7 +88,7 @@ export class SimConfigController {
         type: Number,
         description: "The ID of the SimConfig deleted"
     })
-    delete(@Param("id") id: number): Promise<number> {
+    delete(@Param("id", ParseIntPipe) id: number): Promise<number> {
         return this.simConfigService.delete(id);
     }
 }

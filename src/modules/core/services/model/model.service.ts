@@ -7,7 +7,7 @@ import {
     ResultDTO,
     SimConfigDTO,
 } from "aethon-arion-pipeline";
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { ServerEnvironment } from "src/common/types/server.types";
 import { DataSource } from "typeorm";
 
@@ -37,7 +37,7 @@ export class ModelService {
     deleteRecord(id: number, logger: Logger, repository: any): Promise<number> {
         return repository.delete({ id: id }).then((result) => {
             if (result.affected) return id;
-            else throw new Error(`No record found on repository ${repository} with id ${id} to delete`);
+            else throw new NotFoundException(`No record with id ${id} to delete`);
         });
     }
 }

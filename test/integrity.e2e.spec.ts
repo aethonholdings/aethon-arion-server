@@ -1,0 +1,153 @@
+import { Test, TestingModule } from "@nestjs/testing";
+import { DataSource } from "typeorm";
+import { lastValueFrom } from "rxjs";
+import { C1 } from "aethon-arion-c1";
+import { DomainTypes, Logger, RandomStreamFactory, ResultDTO, SimConfigDTO, States } from "aethon-arion-pipeline";
+import { Result, Run, SimConfig, SimConfigParams, SimSet, StateSpacePoint } from "aethon-arion-db";
+import { RootModule } from "../src/modules/root/root.module";
+import { SimSetService } from "../src/modules/core/endpoints/sim-set/sim-set.service";
+import { SimConfigService } from "../src/modules/core/endpoints/sim-config/sim-config.service";
+import { ResultService } from "../src/modules/core/endpoints/result/result.service";
+
+/** Data integrity of the dispatch / result workflow under concurrency, retries and late results. */
+describe("Dispatch and result integrity (e2e)", () => {
+    jest.setTimeout(600000);
+    let moduleRef: TestingModule;
+    let dataSource: DataSource;
+    let simSetService: SimSetService;
+    let simConfigService: SimConfigService;
+    let resultService: ResultService;
+    const logger = new Logger();
+
+    const optimiserParams = (days?: number) => ({
+        init: {
+            type: "defined",
+            config: {
+                spans: 2,
+                layers: 2,
+                gains: { influence: 0.00001, judgment: 0.00001, incentive: 0.00000001 },
+                graph: "teams",
+                actionStateProbability: 0.85,
+                matrixInit: { influence: "random", judgment: "random", incentive: "random" },
+                board: { controlStep: false },
+                reporting: { unitPrice: 1, unitPayroll: 1 }
+            }
+        },
+        parameterSpace: [
+            { id: "spans", domain: { type: DomainTypes.DISCRETE, optimise: true, min: 1, max: 3, derivativeStepSize: 1 } }
+        ],
+        iterations: { learningRate: 1, maxStepFraction: 0.5, tolerance: 0.0001, max: 10 }
+    });
+    const createSimSet = (description: string) =>
+        simSetService.create({ modelName: "C1", description, optimiserParams: optimiserParams() } as any);
+    const simulate = (simConfig: SimConfigDTO): Promise<ResultDTO> =>
+        lastValueFrom(
+            C1.run$(simConfig, RandomStreamFactory.seeded(simConfig.id, simConfig.runIndex), logger, "e2e", true)
+        );
+
+    beforeAll(async () => {
+        moduleRef = await Test.createTestingModule({ imports: [RootModule] }).compile();
+        await moduleRef.init();
+        dataSource = moduleRef.get(DataSource);
+        simSetService = moduleRef.get(SimSetService);
+        simConfigService = moduleRef.get(SimConfigService);
+        resultService = moduleRef.get(ResultService);
+    });
+
+    afterAll(async () => {
+        await moduleRef.close();
+    });
+
+    it("dispatches distinct, reproducible runs", async () => {
+        await createSimSet("distinct runs");
+        const a = await simConfigService.next("a");
+        const b = await simConfigService.next("b");
+        expect(a.id).toBe(b.id);
+        expect(a.runIndex).not.toBe(b.runIndex);
+        expect(a.runId).not.toBe(b.runId);
+        const [ra, rb, ra2] = await Promise.all([simulate(a), simulate(b), simulate(a)]);
+        expect(ra.reporting).not.toEqual(rb.reporting);
+        expect(ra.reporting).toEqual(ra2.reporting);
+    });
+
+    it("counts concurrent result posts for the same simConfig exactly", async () => {
+        const jobs = await Promise.all(Array.from({ length: 6 }, (_, i) => simConfigService.next(`c${i}`)));
+        const simConfigId = jobs[0].id;
+        const same = jobs.filter((j) => j.id === simConfigId);
+        const results = await Promise.all(same.map((j) => simulate(j)));
+        await Promise.all(results.map((r) => resultService.create(r)));
+        const simConfig = await dataSource.getRepository(SimConfig).findOneByOrFail({ id: simConfigId });
+        // every post is stored; results arriving after convergence are flagged late and not counted
+        const counted = await dataSource.getRepository(Result).count({ where: { simConfigId, late: false } });
+        const all = await dataSource.getRepository(Result).count({ where: { simConfigId } });
+        expect(simConfig.runCount).toBe(counted);
+        expect(all).toBe(results.length);
+    });
+
+    it("treats a re-posted result as idempotent", async () => {
+        const job = await simConfigService.next("retry");
+        const result = await simulate(job);
+        const first = await resultService.create(result);
+        const second = await resultService.create(result);
+        expect(second.id).toBe(first.id);
+        expect(await dataSource.getRepository(Result).count({ where: { runId: job.runId } })).toBe(1);
+        const run = await dataSource.getRepository(Run).findOneByOrFail({ id: job.runId });
+        expect(run.resultId).toBe(first.id);
+    });
+
+    it("saves the state space inside the result transaction", async () => {
+        const job = await simConfigService.next("state-space");
+        await dataSource.getRepository(SimConfig).update(job.id, { saveStateSpace: true });
+        const result = await simulate({ ...job, saveStateSpace: true });
+        expect(result.stateSpace.length).toBeGreaterThan(0);
+        const started = Date.now();
+        const saved = await resultService.create(result);
+        expect(Date.now() - started).toBeLessThan(20000);
+        expect(await dataSource.getRepository(StateSpacePoint).count({ where: { resultId: saved.id } })).toBe(
+            result.stateSpace.length
+        );
+    });
+
+    it("stores a late result without reopening a converged simConfig", async () => {
+        const job = await simConfigService.next("late");
+        await dataSource.getRepository(SimConfig).update(job.id, { converged: true, state: States.COMPLETED });
+        const before = await dataSource.getRepository(SimConfig).findOneByOrFail({ id: job.id });
+        const saved = await resultService.create(await simulate(job));
+        const after = await dataSource.getRepository(SimConfig).findOneByOrFail({ id: job.id });
+        expect((await dataSource.getRepository(Result).findOneByOrFail({ id: saved.id })).late).toBe(true);
+        expect(after.runCount).toBe(before.runCount);
+        expect(after.converged).toBe(true);
+    });
+
+    it("stops dispatching the work of a deleted SimSet", async () => {
+        await dataSource.query("DELETE FROM sim_set");
+        expect(await simConfigService.next("orphan")).toBeNull();
+    });
+
+    it("creates a SimSet with the requested simConfigParams", async () => {
+        const simSet = await simSetService.create({
+            modelName: "C1",
+            description: "params",
+            simConfigParams: { days: 2, randomStreamType: "static" },
+            optimiserParams: optimiserParams()
+        } as any);
+        const stored = await dataSource
+            .getRepository(SimSet)
+            .findOneOrFail({ where: { id: simSet.id }, relations: { simConfigParams: true } });
+        expect(stored.simConfigParams.days).toBe(2);
+        expect(stored.simConfigParams.randomStreamType).toBe("static");
+        await Promise.all([
+            simSetService.create({ modelName: "C1", description: "race 1", simConfigParams: { days: 3, randomStreamType: "random" }, optimiserParams: optimiserParams() } as any),
+            simSetService.create({ modelName: "C1", description: "race 2", simConfigParams: { days: 3, randomStreamType: "random" }, optimiserParams: optimiserParams() } as any)
+        ]);
+        expect(await dataSource.getRepository(SimConfigParams).count({ where: { days: 3 } })).toBe(1);
+    });
+
+    it("rejects invalid optimiser parameters", async () => {
+        const params: any = optimiserParams();
+        params.parameterSpace[0].domain.min = 5;
+        await expect(
+            simSetService.create({ modelName: "C1", description: "bad", optimiserParams: params } as any)
+        ).rejects.toThrow(/Invalid optimiser parameters/);
+    });
+});

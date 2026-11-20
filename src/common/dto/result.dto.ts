@@ -1,6 +1,6 @@
 import { ApiProperty, PickType } from "@nestjs/swagger";
 import { StateSpacePointDTOCreate } from "./state-space.dto";
-import { IsArray, IsDate, IsNumber, IsObject, IsOptional, IsString, ValidateNested } from "class-validator";
+import { IsArray, IsBoolean, IsDate, IsInt, IsNumber, IsObject, IsOptional, IsString, ValidateNested } from "class-validator";
 import { Transform, Type } from "class-transformer";
 import { ConfiguratorParamData, ConfiguratorParamsDTO, SimConfigDTO } from "aethon-arion-pipeline";
 import { ConfiguratorParamsDTOGet } from "./configurator-param.dto";
@@ -23,6 +23,28 @@ export class ResultDTOGet {
         example: 1
     })
     simConfigId: number;
+
+    @IsOptional()
+    @IsInt()
+    @ApiProperty({
+        name: "runId",
+        type: Number,
+        required: false,
+        description: "The dispatch ticket (from GET /sim-config/next) this result answers; makes posting idempotent",
+        example: 1
+    })
+    runId?: number;
+
+    @IsOptional()
+    @IsBoolean()
+    @ApiProperty({
+        name: "late",
+        type: Boolean,
+        required: false,
+        description: "True when the result arrived after its simulation configuration had converged",
+        example: false
+    })
+    late?: boolean;
 
     @IsNumber()
     @ApiProperty({
@@ -614,6 +636,7 @@ export class ResultDTOGet {
 
 export class ResultDTOCreate extends PickType(ResultDTOGet, [
     "simConfigId",
+    "runId",
     "runCount",
     "nodeId",
     "start",

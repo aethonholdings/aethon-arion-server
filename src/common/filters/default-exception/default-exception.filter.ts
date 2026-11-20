@@ -39,8 +39,27 @@ export class DefaultExceptionFilter implements ExceptionFilter {
                 message = "Not Found";
             }
             if (exception instanceof QueryFailedError) {
-                status = HttpStatus.BAD_REQUEST;
-                message = "Bad request";
+                const driverError: any = (exception as any).driverError ?? exception;
+                switch (driverError?.errno) {
+                    case 1205: // ER_LOCK_WAIT_TIMEOUT
+                    case 1213: // ER_LOCK_DEADLOCK
+                        // transient contention: the client should retry
+                        status = HttpStatus.SERVICE_UNAVAILABLE;
+                        message = "Service temporarily unavailable, retry";
+                        response.setHeader("Retry-After", "1");
+                        break;
+                    case 1062: // ER_DUP_ENTRY
+                        status = HttpStatus.CONFLICT;
+                        message = "Conflict";
+                        break;
+                    case 1452: // ER_NO_REFERENCED_ROW_2
+                        status = HttpStatus.BAD_REQUEST;
+                        message = "Bad request: referenced record does not exist";
+                        break;
+                    default:
+                        status = HttpStatus.INTERNAL_SERVER_ERROR;
+                        message = "Internal Server Error";
+                }
             }
             exception = new HttpException(message, status);
         }

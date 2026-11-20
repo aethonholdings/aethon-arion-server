@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { DataSource } from "typeorm";
 import env from "../../../../env/environment";
 
@@ -11,12 +11,15 @@ import {
     ConfiguratorParams,
     SimConfigParams,
     ConvergenceTest,
-    OptimiserState
+    OptimiserState,
+    Run
 } from "aethon-arion-db";
 
 @Injectable()
 export class DatabaseService {
+    private _logger: Logger = new Logger(DatabaseService.name);
     private _dbConfig = env().database;
+    private _rootConfig = env().root;
     entities: any[] = [
         SimSet,
         OrgConfig,
@@ -26,31 +29,34 @@ export class DatabaseService {
         ConfiguratorParams,
         SimConfigParams,
         ConvergenceTest,
-        OptimiserState
+        OptimiserState,
+        Run
     ];
     constructor(private dataSource: DataSource) {}
 
     async onApplicationBootstrap() {
-        if (this._dbConfig.synchronize) {
+        // purging is an explicit, development-only opt-in; schema synchronisation alone never deletes data
+        if (this._dbConfig.purgeOnStart && this._rootConfig.dev) {
+            this._logger.warn("purgeOnStart is set in a dev environment: truncating all tables");
             await this.purgeDb();
+        } else if (this._dbConfig.purgeOnStart) {
+            this._logger.warn("purgeOnStart is ignored outside a dev environment");
         }
     }
 
     async purgeDb() {
-        await this.dataSource.query(`SET FOREIGN_KEY_CHECKS = 0;`);
-        for (const entity of this.entities) {
-            const repository = this.dataSource.getRepository(entity);
-            try {
-                await repository.query(`TRUNCATE ${repository.metadata.tableName};`);
-            } catch (err) {
-                console.log(err);
-            }
-        }
+        // run every statement on one connection so FOREIGN_KEY_CHECKS applies to the TRUNCATEs
+        const queryRunner = this.dataSource.createQueryRunner();
+        await queryRunner.connect();
         try {
-            await this.dataSource.query(`TRUNCATE optimiser_state_convergence_tests_convergence_test;`);
-        } catch (err) {
-            console.log(err);
+            await queryRunner.query(`SET FOREIGN_KEY_CHECKS = 0;`);
+            const tables: string[] = this.dataSource.entityMetadatas.map((metadata) => metadata.tableName);
+            for (const table of tables) {
+                await queryRunner.query(`TRUNCATE \`${table}\`;`);
+            }
+        } finally {
+            await queryRunner.query(`SET FOREIGN_KEY_CHECKS = 1;`);
+            await queryRunner.release();
         }
-        await this.dataSource.query(`SET FOREIGN_KEY_CHECKS = 1;`);
     }
 }

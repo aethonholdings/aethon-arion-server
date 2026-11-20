@@ -1,4 +1,4 @@
-import { Controller, Get, Param } from "@nestjs/common";
+import { Controller, Get, Param, ParseIntPipe } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { ConfiguratorParamsDTO, OptimiserData, OptimiserStateDTO } from "aethon-arion-pipeline";
 import { OptimiserStateService } from "./optimiser-state.service";
@@ -9,7 +9,7 @@ export class OptimiserStateController {
     constructor(private optimiserStateService: OptimiserStateService) {}
 
     @Get(":id")
-    view(@Param("id") id: number): Promise<OptimiserStateDTO<OptimiserData>> {
+    view(@Param("id", ParseIntPipe) id: number): Promise<OptimiserStateDTO<OptimiserData>> {
         return this.optimiserStateService.findOne(id);
     }
 }

@@ -18,6 +18,8 @@ export type ServerEnvironment = {
         password: string;
         database: string;
         synchronize: boolean;
+        purgeOnStart?: boolean; // dev only: truncate all tables on startup (never implied by synchronize)
+        migrationsRun?: boolean; // run pending aethon-arion-db migrations on startup
         logging?: boolean;
         entities?: any;
     };

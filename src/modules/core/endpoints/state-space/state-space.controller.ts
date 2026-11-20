@@ -1,4 +1,4 @@
-import { Controller, Get, Param } from "@nestjs/common";
+import { Controller, Get, Param, ParseIntPipe } from "@nestjs/common";
 import { StateSpaceService } from "./state-space.service";
 import { ApiParam, ApiTags } from "@nestjs/swagger";
 import { StateSpacePointDTOGet } from "../../../../common/dto/state-space.dto";
@@ -16,7 +16,7 @@ export class StateSpaceController {
         description: "The id of the result to which the state space belongs",
         example: 1
     })
-    index(@Param("id") id: number): Promise<StateSpacePointDTOGet[]> {
+    index(@Param("id", ParseIntPipe) id: number): Promise<StateSpacePointDTOGet[]> {
         return this.stateSpaceService.find(+id) as Promise<StateSpacePointDTOGet[]>;
     }
 }

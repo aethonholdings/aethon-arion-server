@@ -4,6 +4,7 @@ import {
     ConfiguratorParams,
     ConvergenceTest,
     OptimiserState,
+    Run,
     OrgConfig,
     Result,
     SimConfig,
@@ -24,7 +25,8 @@ import { DatabaseService } from "./services/database.service";
             ConvergenceTest,
             Result,
             StateSpacePoint,
-            OptimiserState
+            OptimiserState,
+            Run
         ])
     ],
     providers: [DatabaseService],

@@ -98,6 +98,15 @@ export class OptimiserStateService {
         let simSet: SimSet;
 
         if (this._dev) this._logger.log("Updating optimiser states");
+        // lock the optimiser state row with a locking (current) read: concurrent result posts that complete the same
+        // state are serialised here, and a state that is already completed or failed is never updated or stepped
+        // again (a second step would create a duplicate successor or end the SimSet as a false loop)
+        const current: OptimiserState = await tEntityManager.getRepository(OptimiserState).findOneOrFail({
+            where: { id: optimiserStateId },
+            lock: { mode: "pessimistic_write" },
+            loadEagerRelations: false
+        });
+        if (current.status === States.COMPLETED || current.status === States.FAILED) return current;
         // fetch the optimiser state and related objects needed
         return tEntityManager
             .getRepository(OptimiserState)
@@ -155,24 +164,38 @@ export class OptimiserStateService {
                         const requiredConfigParamHashes: string[] = optimiser
                             .getStateRequiredConfiguratorParams(newState)
                             .map((configParam) => configParam.hash);
-                        const existingConvergenceTestIdCount: number = (
-                            await tEntityManager
-                                .getRepository(ConvergenceTest)
-                                .createQueryBuilder()
-                                .innerJoin(
-                                    "configurator_params",
-                                    "ConfiguratorParams",
-                                    "ConfiguratorParams.id = ConvergenceTest.configuratorParamsId"
-                                )
-                                .select("COUNT(ConvergenceTest.id)", "count")
-                                .where("ConfiguratorParams.hash IN(:hashes)", {
-                                    hashes: requiredConfigParamHashes
-                                })
-                                .andWhere("ConvergenceTest.simConfigParamsId=:simConfigParamsId", {
-                                    simConfigParamsId: optimiserState.simSet.simConfigParams.id
-                                })
-                                .getRawOne()
-                        )["count"];
+                        // loop detection, scoped to this SimSet: the step is a loop only if every point it needs
+                        // was already evaluated by an earlier optimiser state of the same SimSet. (Convergence tests
+                        // are shared across SimSets with the same simConfigParams, so a global existence check would
+                        // stop a SimSet that merely reaches points another SimSet evaluated.)
+                        const uniqueRequiredHashes: string[] = [...new Set(requiredConfigParamHashes)];
+                        const evaluatedHashCount: number = Number(
+                            (
+                                await tEntityManager
+                                    .getRepository(ConvergenceTest)
+                                    .createQueryBuilder("convergenceTest")
+                                    .innerJoin(
+                                        "configurator_params",
+                                        "configuratorParams",
+                                        "configuratorParams.id = convergenceTest.configuratorParamsId"
+                                    )
+                                    .innerJoin(
+                                        "optimiser_state_convergence_tests_convergence_test",
+                                        "link",
+                                        "link.convergenceTestId = convergenceTest.id"
+                                    )
+                                    .innerJoin(OptimiserState, "previousState", "previousState.id = link.optimiserStateId")
+                                    .select("COUNT(DISTINCT configuratorParams.hash)", "count")
+                                    .where("configuratorParams.hash IN (:...hashes)", { hashes: uniqueRequiredHashes })
+                                    .andWhere("previousState.simSetId = :simSetId", {
+                                        simSetId: optimiserState.simSet.id
+                                    })
+                                    .getRawOne()
+                            )?.count ?? 0
+                        );
+                        const existingConvergenceTestIdCount: number = evaluatedHashCount;
+                        requiredConfigParamHashes.length = 0;
+                        requiredConfigParamHashes.push(...uniqueRequiredHashes);
                         if (existingConvergenceTestIdCount == requiredConfigParamHashes.length) {
                             if (this._dev)
                                 this._logger.log(

@@ -84,7 +84,17 @@ export class OrgConfigService {
             .leftJoin('orgConfig.simConfigs', 'simConfig')
             .groupBy('orgConfig.agentCount')
             .orderBy('orgConfig.agentCount', 'ASC')
-            .getRawMany();
+            .getRawMany()
+            // the MySQL driver returns aggregates (COUNT, AVG of decimals) as strings; return numbers
+            .then((rows: any[]) =>
+                rows.map((row) => ({
+                    agentCount: Number(row.agentCount),
+                    orgConfigCount: Number(row.orgConfigCount),
+                    avgPerformance: row.avgPerformance === null ? null : Number(row.avgPerformance),
+                    bestPerformance: row.bestPerformance === null ? null : Number(row.bestPerformance),
+                    stdDevPerformance: row.stdDevPerformance === null ? null : Number(row.stdDevPerformance)
+                }))
+            );
     }
 
     delete(id: number): Promise<number> {

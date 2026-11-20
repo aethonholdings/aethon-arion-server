@@ -6,6 +6,7 @@ import { CoreModule } from "../core/core.module";
 import { OpenAPIModule } from "../openapi/openapi.module";
 import environment from "../../../env/environment";
 import { ScheduleModule } from "@nestjs/schedule";
+import { migrations } from "aethon-arion-db";
 
 const env = environment();
 
@@ -18,7 +19,9 @@ const env = environment();
         TypeOrmModule.forRoot({
             ...env.database,
             type: env.database.type as any,
-            autoLoadEntities: true
+            autoLoadEntities: true,
+            migrations: migrations,
+            migrationsRun: env.database.migrationsRun ?? false
         }),
         ScheduleModule.forRoot(),
         DatabaseModule,
