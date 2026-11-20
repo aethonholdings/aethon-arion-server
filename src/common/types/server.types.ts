@@ -32,7 +32,8 @@ export type ServerEnvironment = {
 
 export type ArionOptions = {
     storeStateSpace: boolean;
-    convergenceMargin: number; // target standard error of the mean as a fraction of |mean| (e.g. 0.01)
+    convergenceMargin: number; // runs per simConfig: target standard error of the mean as a fraction of |mean| (e.g. 0.01)
+    orgConfigConvergenceMargin?: number; // org configs per convergence test: same, across org config means (default 0.05)
     convergenceAbsoluteError?: number; // absolute standard error floor, for means near 0 (default 0)
     minOrgConfigs: number;
     maxOrgConfigs?: number; // cap on org configs per convergence test (default 200)

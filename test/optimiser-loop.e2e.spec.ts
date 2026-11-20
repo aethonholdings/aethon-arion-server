@@ -141,7 +141,7 @@ describe("Optimiser loop (e2e)", () => {
                 expect(test.orgConfigCount).toBeGreaterThanOrEqual(env.options.minOrgConfigs);
                 const se = (test.stdDevPerformance ?? 0) / Math.sqrt(test.orgConfigCount);
                 const tolerance = Math.max(
-                    env.options.convergenceMargin * Math.abs(test.avgPerformance ?? 0),
+                    (env.options.orgConfigConvergenceMargin ?? 0.05) * Math.abs(test.avgPerformance ?? 0),
                     env.options.convergenceAbsoluteError ?? 0
                 );
                 expect(se <= tolerance + 1e-9 || test.orgConfigCount >= (env.options.maxOrgConfigs ?? 200)).toBe(true);

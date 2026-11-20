@@ -175,9 +175,10 @@ describe("Dispatch and result integrity (e2e)", () => {
             const key = oc.configuratorParams.hash;
             byPoint.set(key, [...(byPoint.get(key) ?? []), oc]);
         }
-        expect(byPoint.size).toBe(2); // x and x + delta
-        const [x, xd] = [...byPoint.values()];
-        for (const a of x) {
+        expect(byPoint.size).toBe(3); // x, x + delta and x - delta (central difference)
+        const points = [...byPoint.values()];
+        const [x] = points;
+        for (const xd of points.slice(1)) for (const a of x) {
             const b = xd.find((oc) => oc.replicate === a.replicate)!;
             expect(b).toBeDefined();
             // same draws: the judgment tensors differ only by the gain ratio, the incentive tensors are identical
@@ -191,6 +192,25 @@ describe("Dispatch and result integrity (e2e)", () => {
         const params = await dataSource.getRepository(SimConfigParams).findOneByOrFail({ days: 4, randomStreamType: "random" });
         expect(Number.isInteger(params.seed)).toBe(true);
         expect(simSet.id).toBeDefined();
+    });
+
+    it("ends a SimSet after iterations.max optimiser states and stores org config diagnostics", async () => {
+        await dataSource.query("DELETE FROM sim_set");
+        const params: any = optimiserParams();
+        params.iterations.max = 1;
+        params.iterations.tolerance = 0; // never converged by tolerance
+        const simSet = await simSetService.create({ modelName: "C1", description: "max", simConfigParams: { days: 5, randomStreamType: "random" }, optimiserParams: params } as any);
+        for (let i = 0; i < 2000; i++) {
+            const job = await simConfigService.next("max");
+            if (!job) break;
+            await resultService.create(await simulate(job));
+            if ((await dataSource.getRepository(SimSet).findOneByOrFail({ id: simSet.id })).state === States.COMPLETED) break;
+        }
+        expect((await dataSource.getRepository(SimSet).findOneByOrFail({ id: simSet.id })).state).toBe(States.COMPLETED);
+        expect(await dataSource.query("SELECT COUNT(*) AS n FROM optimiser_state WHERE simSetId = ?", [simSet.id])).toEqual([{ n: "1" }]);
+        const orgConfig = await dataSource.getRepository(OrgConfig).findOne({ where: {}, order: { id: "DESC" } });
+        expect(orgConfig.diagnostics.stable).toBe(true);
+        expect(orgConfig.diagnostics.consensusTimeHours).toBeGreaterThan(0);
     });
 
     it("rejects invalid optimiser parameters", async () => {

@@ -34,7 +34,8 @@ export class ConvergenceTestService {
         this._criteria = {
             minSamples: this._env.options.minOrgConfigs,
             maxSamples: this._env.options.maxOrgConfigs ?? 200,
-            relativeError: this._env.options.convergenceMargin || 0.01,
+            // org configs sample the population being studied; a looser margin than for runs is usually adequate
+            relativeError: this._env.options.orgConfigConvergenceMargin ?? 0.05,
             absoluteError: this._env.options.convergenceAbsoluteError ?? 0
         };
     }

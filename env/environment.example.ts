@@ -22,7 +22,8 @@ export default () =>
         },
         options: {
             storeStateSpace: true,
-            convergenceMargin: 0.01, // target standard error of the mean as a fraction of |mean|
+            convergenceMargin: 0.01, // runs: target standard error of the mean as a fraction of |mean|
+            orgConfigConvergenceMargin: 0.05, // org configs: the same across org config means
             convergenceAbsoluteError: 0,
             minOrgConfigs: 10,
             maxOrgConfigs: 200,

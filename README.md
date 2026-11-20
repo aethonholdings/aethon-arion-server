@@ -38,7 +38,8 @@ export interface ServerEnvironment {
     };
     options: {
         storeStateSpace: boolean;                   // whether the server saves state space data by default
-        convergenceMargin: number;                  // target standard error of the mean, as a fraction of |mean| (e.g. 0.01)
+        convergenceMargin: number;                  // runs per simulation config: target standard error of the mean, as a fraction of |mean| (e.g. 0.01)
+        orgConfigConvergenceMargin?: number;        // org configs per convergence test: the same across org config means (default 0.05)
         convergenceAbsoluteError?: number;          // absolute standard error floor for means near 0 (default 0)
         minSimRuns: number;                         // minimum runs per simulation config
         maxSimRuns?: number;                        // cap on runs per simulation config (default 1000)
@@ -60,11 +61,17 @@ The schema is managed by the migrations shipped in `aethon-arion-db` (exported a
 
 ## Convergence
 
-A simulation config is converged once it has at least `minSimRuns` results and the standard error of its mean performance, s/√n with the sample standard deviation, is at most `max(convergenceMargin × |mean|, convergenceAbsoluteError)`. A convergence test applies the same rule to the means of its org configs, starting from `minOrgConfigs`. `maxSimRuns` and `maxOrgConfigs` cap the cost; reaching a cap is logged. The number of runs needed is about (CV / convergenceMargin)², where CV is the coefficient of variation of performance. For example, CV 0.5 with a 1% margin needs about 2,500 runs.
+A simulation config is converged once it has at least `minSimRuns` results and the standard error of its mean performance, s/√n with the sample standard deviation, is at most `max(convergenceMargin × |mean|, convergenceAbsoluteError)`. A convergence test applies the same rule to the means of its org configs, starting from `minOrgConfigs` and using `orgConfigConvergenceMargin` (default 5%). `maxSimRuns` and `maxOrgConfigs` cap the cost; reaching a cap is logged. The number of runs needed is about (CV / convergenceMargin)², where CV is the coefficient of variation of performance. For example, CV 0.5 with a 1% margin needs about 2,500 runs.
 
 ## Common random numbers
 
 Org config k of a convergence test is generated from seed (base seed, k), and run j of it uses random streams derived from (base seed, k, j); `GET /sim-config/next` returns these keys as `seedKeys`. Every optimiser point therefore evaluates the same random scenarios, so the finite-difference gradients compare like with like. The base seed is 0 for `static` simulation parameters and drawn once for `random` ones.
+
+## Optimiser
+
+- The optimiser stops when the gradient is confidently small: the norm of |slope| + 2 SE over the parameters is below `iterations.tolerance`.
+- Gradients are paired differences between optimiser points over matched org config replicates, which share their random draws.
+- The SimSet ends after `iterations.max` optimiser states when that is set, or when a step would revisit points the SimSet has already evaluated.
 
 ## Node protocol
 

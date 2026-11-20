@@ -11,7 +11,7 @@ import {
     SimSetDTO,
     States
 } from "aethon-arion-pipeline";
-import { ConfiguratorParams, ConvergenceTest, OptimiserState, SimSet } from "aethon-arion-db";
+import { ConfiguratorParams, ConvergenceTest, OptimiserState, SimConfig, SimSet } from "aethon-arion-db";
 import { ConvergenceTestService } from "../../services/convergence-test/convergence-test.service";
 import { ServerEnvironment } from "src/common/types/server.types";
 import environment from "env/environment";
@@ -128,6 +128,9 @@ export class OptimiserStateService {
                 simSet = optimiserState.simSet;
 
                 if (this._dev) this._logger.log(`Updating optimiser state id:${optimiserState.id}`);
+                // attach per-replicate summaries to the convergence tests: the optimiser pairs differences between
+                // points by org config replicate (common random numbers) to estimate gradients and their errors
+                await this._attachReplicates(optimiserState.convergenceTests, tEntityManager);
                 // run the optimiser update method with the current ConvergenceTest results to get updated values
                 // for the optimiser state parameters
                 let updatedOptimiserState = optimiser.update(
@@ -154,6 +157,17 @@ export class OptimiserStateService {
                     // the saved step also is complete.  We now check if the optimiser has converged to an optimal
                     // solution
                     if (!optimiserState.converged) {
+                        // iteration limit: the SimSet ends once iterations.max optimiser states have been evaluated
+                        const maxIterations: number | undefined = optimiserState.simSet.optimiserParams?.iterations?.max;
+                        if (maxIterations !== undefined && optimiserState.stepCount + 1 >= maxIterations) {
+                            this._logger.log(
+                                `SimSet ${optimiserState.simSet.id} reached iterations.max (${maxIterations}) without convergence`
+                            );
+                            await tEntityManager
+                                .getRepository(SimSet)
+                                .update(optimiserState.simSet.id, { state: States.COMPLETED });
+                            return null;
+                        }
                         let newState = optimiser.step(
                             optimiserState.simSet.optimiserParams,
                             optimiserState,
@@ -231,6 +245,34 @@ export class OptimiserStateService {
                 }
                 return optimiserState;
             });
+    }
+
+    /** Adds `replicates` (per org config replicate mean, stdev and run count) to each convergence test. */
+    private async _attachReplicates(convergenceTests: ConvergenceTest[], tEntityManager: EntityManager): Promise<void> {
+        const ids: number[] = (convergenceTests ?? []).map((convergenceTest) => convergenceTest.id);
+        if (ids.length === 0) return;
+        const rows: any[] = await tEntityManager
+            .getRepository(SimConfig)
+            .createQueryBuilder("simConfig")
+            .innerJoin("simConfig.orgConfig", "orgConfig")
+            .select("simConfig.convergenceTestId", "convergenceTestId")
+            .addSelect("orgConfig.replicate", "replicate")
+            .addSelect("simConfig.avgPerformance", "avgPerformance")
+            .addSelect("simConfig.stdDevPerformance", "stdDevPerformance")
+            .addSelect("simConfig.runCount", "runCount")
+            .where("simConfig.convergenceTestId IN (:...ids)", { ids })
+            .getRawMany();
+        const toNumber = (value: any) => (value === null || value === undefined ? null : Number(value));
+        for (const convergenceTest of convergenceTests) {
+            (convergenceTest as any).replicates = rows
+                .filter((row) => Number(row.convergenceTestId) === convergenceTest.id)
+                .map((row) => ({
+                    replicate: toNumber(row.replicate),
+                    avgPerformance: toNumber(row.avgPerformance),
+                    stdDevPerformance: toNumber(row.stdDevPerformance),
+                    runCount: Number(row.runCount ?? 0)
+                }));
+        }
     }
 
     findOne(id: number) {
