@@ -1,6 +1,6 @@
 import { forwardRef, Inject, Injectable, Logger } from "@nestjs/common";
 import { DataSource, EntityManager, In } from "typeorm";
-import { ConfiguratorParams, ConvergenceTest, OrgConfig, SimConfig, SimConfigParams } from "aethon-arion-db";
+import { ConfiguratorParams, ConvergenceTest, OptimiserState, OrgConfig, SimConfig, SimConfigParams } from "aethon-arion-db";
 import {
     ConfiguratorParamData,
     ConfiguratorParamsDTO,
@@ -40,7 +40,12 @@ export class ConvergenceTestService {
         tEntityManager?: EntityManager
     ): Promise<ConvergenceTest[]> {
         if (!tEntityManager) tEntityManager = this.dataSource.createEntityManager();
-        const requiredHashes: string[] = requiredConfiguratorParamsDTOs.map((param) => param.hash);
+        // de-duplicate by hash: two optimiser data points can map to the same configuratorParams (e.g. a
+        // numerical parameter whose domain collapses to a single value) and must share one convergence test
+        const uniqueRequiredConfiguratorParamsDTOs: ConfiguratorParamsDTO<ConfiguratorParamData>[] = [
+            ...new Map(requiredConfiguratorParamsDTOs.map((param) => [param.hash, param])).values()
+        ];
+        const requiredHashes: string[] = uniqueRequiredConfiguratorParamsDTOs.map((param) => param.hash);
 
         if (this._dev) this._logger.log(`Generating convergence tests`);
         // find if a convergence test already exists for the required configuratorParams and simConfigParams
@@ -62,7 +67,7 @@ export class ConvergenceTestService {
                 // (3) create any necessary sim and orgConfigs
 
                 // cycle through all requiredConfigParams
-                for (let requiredConfiguratorParamsDTO of requiredConfiguratorParamsDTOs) {
+                for (let requiredConfiguratorParamsDTO of uniqueRequiredConfiguratorParamsDTOs) {
                     // see if the required configParams were found in the database
                     let configuratorParams: ConfiguratorParams = configuratorParamsFound.find(
                         (params) => params.hash === requiredConfiguratorParamsDTO.hash
@@ -79,7 +84,7 @@ export class ConvergenceTestService {
 
                     // now see if an existing convergence test with the required configParams exist
                     if (this._dev) this._logger.log(`Searching for matching existing ConvergenceTests`);
-                    await tEntityManager
+                    const convergenceTest: ConvergenceTest = await tEntityManager
                         .getRepository(ConvergenceTest)
                         .createQueryBuilder()
                         .select("id", "id")
@@ -94,6 +99,25 @@ export class ConvergenceTestService {
                             if (convergenceTestPartial) {
                                 if (this._dev)
                                     this._logger.log(`Existing convergence test ${convergenceTestPartial.id} found`);
+                                // link the existing convergence test to this optimiser state so that the
+                                // optimiser can read its results on update
+                                const existingConvergenceTest: ConvergenceTest = await tEntityManager
+                                    .getRepository(ConvergenceTest)
+                                    .findOneOrFail({
+                                        where: { id: convergenceTestPartial.id },
+                                        relations: { optimiserStates: true }
+                                    });
+                                const alreadyLinked: boolean = (existingConvergenceTest.optimiserStates || []).some(
+                                    (state) => state.id === optimiserState.id
+                                );
+                                if (!alreadyLinked && optimiserState.id !== undefined) {
+                                    await tEntityManager
+                                        .createQueryBuilder()
+                                        .relation(OptimiserState, "convergenceTests")
+                                        .of(optimiserState.id)
+                                        .add(existingConvergenceTest.id);
+                                }
+                                return existingConvergenceTest;
                             } else {
                                 // create a new convergence test
                                 if (this._dev) this._logger.log(`Generating a new convergenceTest`);
@@ -143,8 +167,10 @@ export class ConvergenceTestService {
                                     this._logger.log(
                                         `OrgConfigs and simConfigs generated against the convergence test`
                                     );
+                                return convergenceTest;
                             }
                         });
+                    convergenceTests.push(convergenceTest);
                 }
                 return convergenceTests;
             })
@@ -184,30 +210,55 @@ export class ConvergenceTestService {
                     })
                     .groupBy("simConfig.convergenceTestId")
                     .getRawOne()
-                    .then(async (simConfigSet) => {
-                        simConfigSet.stdDevPerformance = simConfigSet.stdDevPerformance
-                            ? simConfigSet.stdDevPerformance
-                            : 0;
+                    .then(async (raw) => {
+                        // the MySQL driver returns SUM/COUNT aggregates as strings; normalise to numbers so the
+                        // completion comparison below is not a string-vs-number comparison
+                        const simConfigSet = {
+                            avgPerformance: raw?.avgPerformance === null || raw?.avgPerformance === undefined
+                                ? null
+                                : Number(raw.avgPerformance),
+                            stdDevPerformance: raw?.stdDevPerformance === null || raw?.stdDevPerformance === undefined
+                                ? null
+                                : Number(raw.stdDevPerformance),
+                            orgConfigCount: Number(raw?.orgConfigCount ?? 0),
+                            simConfigCount: Number(raw?.simConfigCount ?? 0),
+                            completedSimConfigCount: Number(raw?.completedSimConfigCount ?? 0),
+                            resultCount: Number(raw?.resultCount ?? 0),
+                            dispatchedRuns: Number(raw?.dispatchedRuns ?? 0)
+                        };
                         // check for convergence
                         if (this._dev) this._logger.log("Checking ConvergenceTest convergence");
-                        let converged: boolean = false;
+                        let converged: boolean = convergenceTest.converged === true;
+                        const allSimConfigsCompleted: boolean =
+                            simConfigSet.simConfigCount > 0 &&
+                            simConfigSet.completedSimConfigCount === simConfigSet.simConfigCount;
 
-                        // first make sure that all simConfigs for the ConvergenceTest have been completed; if not,
-                        // we cannot speak about convergence
-                        if (simConfigSet.completedSimConfigCount === simConfigSet.simConfigCount) {
-                            // for convergence tests requiring multiple orgConfigs/ simConfigs, ensure that we have
-                            // an estimate of standard deviation
-                            if (
-                                convergenceTest.configuratorParams.multipleOrgConfigs &&
-                                convergenceTest.stdDevPerformance > 0
-                            ) {
-                                // we have an estimate of stddev, therefore calculate its percentage change with the new
-                                // summary statistics of results to see if we have converged
-                                const percentChange = Math.abs(
-                                    (simConfigSet.stdDevPerformance - convergenceTest.stdDevPerformance) /
-                                        convergenceTest.stdDevPerformance
-                                );
-                                converged = percentChange < this._convergenceMargin ? true : false;
+                        // convergence is only assessed once every simConfig in the test has completed, and only
+                        // for tests that have not already converged (late results must not re-open a test)
+                        if (!converged && allSimConfigsCompleted) {
+                            if (!convergenceTest.configuratorParams.multipleOrgConfigs) {
+                                // a single deterministic orgConfig: the simConfig-level convergence is sufficient
+                                converged = true;
+                            } else {
+                                // the stored stdDev is the estimate from the previous fully completed set of
+                                // simConfigs (stats are only persisted when all simConfigs are complete, see below)
+                                const previousStdDev: number | null =
+                                    convergenceTest.stdDevPerformance === null ||
+                                    convergenceTest.stdDevPerformance === undefined
+                                        ? null
+                                        : Number(convergenceTest.stdDevPerformance);
+                                const currentStdDev: number = simConfigSet.stdDevPerformance ?? 0;
+                                if (previousStdDev === null) {
+                                    // no baseline yet: record this estimate and add an orgConfig to compare against
+                                    converged = false;
+                                } else if (previousStdDev === 0) {
+                                    // a zero baseline cannot be used as a relative denominator; only a still zero
+                                    // dispersion counts as converged
+                                    converged = currentStdDev === 0;
+                                } else {
+                                    const percentChange = Math.abs((currentStdDev - previousStdDev) / previousStdDev);
+                                    converged = percentChange < this._convergenceMargin;
+                                }
                                 // if we have not converged, we will need to generate more simulations to tighten the
                                 // distribution of results
                                 if (!converged) {
@@ -246,21 +297,27 @@ export class ConvergenceTestService {
                                                 .then(() => simConfigSet.simConfigCount++);
                                         });
                                 }
-                            } else {
-                                converged = true;
                             }
                         }
                         // we have calculated all the summary statistics and generated any new objects needed,
                         // now we just need to update all the convergence test statistics and save to the database
                         if (converged) {
-                            if (this._dev) this._logger.log("Convergence test converged");
+                            if (this._dev && !convergenceTest.converged) this._logger.log("Convergence test converged");
                             convergenceTest.state = States.COMPLETED;
                             convergenceTest.converged = true;
                         } else if (simConfigSet.resultCount > 0) {
                             convergenceTest.state = States.RUNNING;
                         }
-                        for (let key in simConfigSet) {
-                            convergenceTest[key] = simConfigSet[key];
+                        convergenceTest.orgConfigCount = simConfigSet.orgConfigCount;
+                        convergenceTest.simConfigCount = simConfigSet.simConfigCount;
+                        convergenceTest.completedSimConfigCount = simConfigSet.completedSimConfigCount;
+                        convergenceTest.resultCount = simConfigSet.resultCount;
+                        convergenceTest.dispatchedRuns = simConfigSet.dispatchedRuns;
+                        // performance statistics are only persisted for a fully completed set of simConfigs, so that
+                        // the stored stdDev is always a valid baseline for the next convergence comparison
+                        if (allSimConfigsCompleted) {
+                            convergenceTest.avgPerformance = simConfigSet.avgPerformance;
+                            convergenceTest.stdDevPerformance = simConfigSet.stdDevPerformance ?? 0;
                         }
                         if (this._dev) this._logger.log("Saving convergence test");
                         return tEntityManager.getRepository(ConvergenceTest).save(convergenceTest);

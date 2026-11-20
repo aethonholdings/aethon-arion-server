@@ -99,14 +99,15 @@ export class ResultService {
                     let converged: boolean = false;
                     if (update.runCount >= 2 && update.runCount >= this._minSimRuns) {
                         if (this._dev) this._logger.log("Checking convergence");
-                        if (simConfig.stdDevPerformance > 0) {
-                            const percentChange = Math.abs(
-                                (update.stdDevPerformance - simConfig.stdDevPerformance) /
-                                    simConfig.stdDevPerformance
-                            );
-                            converged = percentChange < this._convergenceMargin ? true : false;
+                        const previousStdDev: number = Number(simConfig.stdDevPerformance ?? 0);
+                        const currentStdDev: number = Number(update.stdDevPerformance ?? 0);
+                        if (previousStdDev > 0) {
+                            const percentChange = Math.abs((currentStdDev - previousStdDev) / previousStdDev);
+                            converged = percentChange < this._convergenceMargin;
                         } else {
-                            converged = true;
+                            // a zero baseline cannot be used as a relative denominator; only a dispersion that is
+                            // still zero (identical outcomes across all runs) counts as converged
+                            converged = currentStdDev === 0;
                         }
                     }
                     if (converged) {

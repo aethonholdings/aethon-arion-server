@@ -28,38 +28,58 @@ export class SimConfigService {
         this._dev = env.root.dev;
     }
 
-    next(nodeId: string): Promise<SimConfigDTO> {
+    async next(nodeId: string): Promise<SimConfigDTO> {
         this._logger.log(`Next simconfig requested by node ${nodeId}`);
+        const repository: Repository<SimConfig> = this.dataSource.getRepository(SimConfig);
 
-        return this.dataSource
-            .getRepository(SimConfig)
-            .findOne({
-                relations: {
-                    orgConfig: {
-                        configuratorParams: true
-                    },
-                    convergenceTest: true
+        const candidate: SimConfig | null = await repository.findOne({
+            select: { id: true, convergenceTestId: true },
+            where: { converged: false },
+            order: { convergenceTestId: "ASC", id: "ASC" }
+        });
+        if (!candidate) return null;
+        if (this._dev) this._logger.log(`Next simconfig ${candidate.id} fetched`);
+
+        // Dispatch atomically in a single UPDATE statement. The previous read-modify-write of the whole entity
+        // lost increments when several nodes polled concurrently and could overwrite runCount, statistics and the
+        // completed state written by a concurrent result post. The converged guard ensures a simConfig that
+        // converged between the read above and this update is not re-opened.
+        const dispatch = await repository
+            .createQueryBuilder()
+            .update(SimConfig)
+            .set({
+                dispatchedRuns: () => "dispatchedRuns + 1",
+                start: () => "COALESCE(start, CURRENT_TIMESTAMP)",
+                state: States.RUNNING
+            })
+            .where("id = :id", { id: candidate.id })
+            .andWhere("converged = :converged", { converged: false })
+            .execute();
+        if (!dispatch.affected) {
+            if (this._dev) this._logger.log(`SimConfig ${candidate.id} converged before dispatch; none dispatched`);
+            return null;
+        }
+
+        const simConfig: SimConfig = await repository.findOneOrFail({
+            relations: {
+                orgConfig: {
+                    configuratorParams: true
                 },
-                where: { converged: false },
-                order: { convergenceTestId: "ASC", id: "ASC" }
-            })
-            .then((simConfig) => {
-                if (simConfig) {
-                    if (this._dev) this._logger.log("Next simconfig fetched");
-                    if (simConfig.dispatchedRuns === 0) simConfig.start = new Date();
-                    simConfig.dispatchedRuns++;
-                    simConfig.state = States.RUNNING;
-                    return this.dataSource.getRepository(SimConfig).save(simConfig);
-                }
-                return simConfig;
-            })
-            .then((simConfig) => {
-                if (simConfig) {
-                    if (this._dev) this._logger.log("SimConfig updated");
-                    this.convergenceTestService.touch(simConfig.convergenceTest.id);
-                }
-                return simConfig;
-            });
+                convergenceTest: true
+            },
+            where: { id: candidate.id }
+        });
+        if (this._dev) this._logger.log("SimConfig updated");
+
+        // update the upstream statistics; a failure here must not prevent the node from receiving its job
+        try {
+            await this.convergenceTestService.touch(simConfig.convergenceTest.id);
+        } catch (error) {
+            this._logger.error(
+                `Convergence test touch failed after dispatching simConfig ${simConfig.id}: ${error?.message || error}`
+            );
+        }
+        return simConfig;
     }
 
     findOne(id: number): Promise<SimConfigDTO> {
