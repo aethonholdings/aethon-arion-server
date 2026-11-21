@@ -57,7 +57,9 @@ describe("Optimiser loop (e2e)", () => {
                         gains: { influence: 0.00001, judgment: 0.00001, incentive: 0.00000001 },
                         graph: "top-down",
                         actionStateProbability: 0.85,
-                        matrixInit: { influence: "random", judgment: "random", incentive: "random" },
+                        // near-deterministic coordination (hybrid incentive keeps several org configs per point):
+                        // revenue then grows clearly with headcount, so the neighbour search moves significantly
+                        matrixInit: { influence: "purposeful", judgment: "purposeful", incentive: "hybrid" },
                         board: { controlStep: false },
                         reporting: { unitPrice: 1, unitPayroll: 1 }
                     }
