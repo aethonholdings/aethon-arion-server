@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+# Unpublished sibling packages are built from the matching branch by ci/link-siblings.sh. The repositories are
+# private: add a repository secret ARION_REPOS_TOKEN with read access to the aethon-arion repositories.
+env:
+  ARION_REPOS_TOKEN: ${{ secrets.ARION_REPOS_TOKEN }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ci # throwaway database of this job only
+          MYSQL_DATABASE: arion
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -pci"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      ARION_DB_HOST: 127.0.0.1
+      ARION_DB_PORT: 3306
+      ARION_DB_USER: root
+      ARION_DB_PASSWORD: ci
+      ARION_DB_NAME: arion
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: bash ci/link-siblings.sh core pipeline c1 db
+      - run: npm run test:setup # committed test environment (env/environment.ci.ts)
+      - run: npm run build
+      - run: npm run test:unit
+      - name: Fresh database for the end-to-end tests
+        run: mysql -h 127.0.0.1 -uroot -pci -e "DROP DATABASE arion; CREATE DATABASE arion;"
+      - run: npm run test:e2e:ci
