@@ -12,7 +12,6 @@ import { StateSpaceService } from "./endpoints/state-space/state-space.service";
 import { SeedsController } from "./endpoints/seeds/seeds.controller";
 import { SeedsService } from "./endpoints/seeds/seeds.service";
 import { ModelService } from "./services/model/model.service";
-import { ConfiguratorParamsService } from "./services/configurator-params/configurator-params.service";
 import { ConvergenceTestService } from "./services/convergence-test/convergence-test.service";
 import { OptimiserStateService } from "./endpoints/optimiser-state/optimiser-state.service";
 import { OptimiserStateController } from "./endpoints/optimiser-state/optimiser-state.controller";
@@ -30,7 +29,6 @@ import { OptimiserStateController } from "./endpoints/optimiser-state/optimiser-
     providers: [SimConfigService, ResultService, OrgConfigService, SimSetService, StateSpaceService, SeedsService,
         ModelService,
         OptimiserStateService,
-        ConfiguratorParamsService,
         ConvergenceTestService
     ]
 })

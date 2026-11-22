@@ -5,6 +5,7 @@
 # environment data
 /env/*
 !/env/environment.example.ts
+!/env/environment.ci.ts
 
 # package
 package-lock.json
@@ -49,3 +50,5 @@ yalc.lock
 
 # Claude Code
 .claude/
+# sibling packages built by ci/link-siblings.sh
+/.siblings

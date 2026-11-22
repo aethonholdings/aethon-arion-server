@@ -21,7 +21,10 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json --watch",
-    "doc": "npx openapi-to-md ./swagger/open-api.json ./docs/api.md"
+    "doc": "npx openapi-to-md ./swagger/open-api.json ./docs/api.md",
+    "test:setup": "cp env/environment.ci.ts env/environment.ts",
+    "test:unit": "jest src --testTimeout=30000",
+    "test:e2e:ci": "jest --config ./test/jest-e2e.json --runInBand"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.10",
