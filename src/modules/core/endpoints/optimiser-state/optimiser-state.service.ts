@@ -133,6 +133,17 @@ export class OptimiserStateService {
                 await this._attachReplicates(optimiserState.convergenceTests, tEntityManager);
                 // run the optimiser update method with the current ConvergenceTest results to get updated values
                 // for the optimiser state parameters
+                // a failed convergence test fails the optimiser state and its SimSet (the optimiser cannot evaluate the
+                // point); the failure is recorded rather than thrown, so the result post that triggered it is kept
+                if (optimiserState.convergenceTests.some((test) => test.state === States.FAILED)) {
+                    this._logger.warn(`Optimiser state ${optimiserState.id} failed: a convergence test failed`);
+                    await tEntityManager.getRepository(OptimiserState).update(optimiserState.id, {
+                        status: States.FAILED,
+                        end: new Date()
+                    });
+                    await tEntityManager.getRepository(SimSet).update(optimiserState.simSet.id, { state: States.FAILED });
+                    return { ...optimiserState, status: States.FAILED } as OptimiserState;
+                }
                 let updatedOptimiserState = optimiser.update(
                     optimiserState.simSet.optimiserParams,
                     optimiserState,

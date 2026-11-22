@@ -15,6 +15,8 @@ import { ModelService } from "./services/model/model.service";
 import { ConvergenceTestService } from "./services/convergence-test/convergence-test.service";
 import { OptimiserStateService } from "./endpoints/optimiser-state/optimiser-state.service";
 import { OptimiserStateController } from "./endpoints/optimiser-state/optimiser-state.controller";
+import { RunController } from "./endpoints/run/run.controller";
+import { RunService } from "./endpoints/run/run.service";
 
 @Module({
     controllers: [
@@ -24,12 +26,14 @@ import { OptimiserStateController } from "./endpoints/optimiser-state/optimiser-
         SimSetController,
         StateSpaceController,
         SeedsController,
-        OptimiserStateController
+        OptimiserStateController,
+        RunController
     ],
     providers: [SimConfigService, ResultService, OrgConfigService, SimSetService, StateSpaceService, SeedsService,
         ModelService,
         OptimiserStateService,
-        ConvergenceTestService
+        ConvergenceTestService,
+        RunService
     ]
 })
 export class CoreModule {}

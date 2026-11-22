@@ -99,6 +99,14 @@ describe("Node protocol over HTTP (e2e)", () => {
         for (const row of summary.body.payload) expect(typeof row.orgConfigCount).toBe("number");
     });
 
+    it("accepts a node's failure report for a run and 404s an unknown run", async () => {
+        const job = (await request(app.getHttpServer()).get("/arion/sim-config/next").query({ nodeId: "http" })).body.payload;
+        const response = await request(app.getHttpServer()).post(`/arion/run/${job.runId}/failure`).send({ error: "boom" });
+        expect(response.status).toBe(201);
+        expect(response.body.payload.failedRuns).toBe(1);
+        expect((await request(app.getHttpServer()).post("/arion/run/999999/failure").send({ error: "x" })).status).toBe(404);
+    });
+
     it("returns 404 for a missing record", async () => {
         const response = await request(app.getHttpServer()).get("/arion/sim-config/999999");
         expect(response.status).toBe(404);

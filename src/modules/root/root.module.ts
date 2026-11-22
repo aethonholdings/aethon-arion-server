@@ -20,6 +20,9 @@ const env = environment();
             ...env.database,
             type: env.database.type as any,
             autoLoadEntities: true,
+            // schema synchronisation is done by DatabaseService, which refuses it where it would destroy data (MariaDB
+            // stores JSON columns as LONGTEXT, so TypeORM drops and re-creates them on every synchronisation)
+            synchronize: false,
             migrations: migrations,
             migrationsRun: env.database.migrationsRun ?? false
         }),

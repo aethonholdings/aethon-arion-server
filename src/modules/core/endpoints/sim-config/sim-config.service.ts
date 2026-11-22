@@ -61,6 +61,7 @@ export class SimConfigService {
                 .innerJoin(OptimiserState, "optimiserState", "optimiserState.id = link.optimiserStateId")
                 .innerJoin(SimSet, "simSet", "simSet.id = optimiserState.simSetId")
                 .where("simConfig.converged = :converged", { converged: false })
+                .andWhere("simConfig.state != :failed", { failed: States.FAILED }) // failed simConfigs are not retried
                 .andWhere("optimiserState.status NOT IN (:...inactive)", { inactive })
                 .andWhere("simSet.state NOT IN (:...inactive)", { inactive })
                 .orderBy("simConfig.convergenceTestId", "ASC")

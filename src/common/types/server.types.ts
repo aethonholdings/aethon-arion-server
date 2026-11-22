@@ -39,6 +39,7 @@ export type ArionOptions = {
     maxOrgConfigs?: number; // cap on org configs per convergence test (default 200)
     minSimRuns: number;
     maxSimRuns?: number; // cap on runs per simConfig (default 1000)
+    maxRunFailures?: number; // failed runs after which a simConfig is marked failed and no longer dispatched (default 3)
     randomStreamType: "static" | "random";
     simulationDays: number;
     models: Model[];

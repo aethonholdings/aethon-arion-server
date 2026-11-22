@@ -117,3 +117,26 @@ describe("standard-error stopping rule (statistical precision)", () => {
         expect(errors[Math.floor(0.95 * errors.length)]).toBeLessThan(2.5 * rel);
     });
 });
+
+describe("DatabaseService schema synchronisation", () => {
+    const run = async (synchronize: boolean, version: string, existingTables: number) => {
+        let synchronised = false;
+        const dataSource: any = {
+            entityMetadatas: [{ tableName: "sim_set" }],
+            synchronize: async () => (synchronised = true),
+            query: async (q: string) => (q.startsWith("SELECT VERSION") ? [{ version }] : [{ n: existingTables }])
+        };
+        const s = new DatabaseService(dataSource);
+        (s as any)._dbConfig = { synchronize };
+        await s.onModuleInit();
+        return synchronised;
+    };
+    it("never synchronises an existing MariaDB schema (it would erase all JSON column data)", async () => {
+        expect(await run(true, "10.11.14-MariaDB", 3)).toBe(false);
+    });
+    it("synchronises an empty MariaDB database and MySQL databases, and nothing when synchronize is off", async () => {
+        expect(await run(true, "10.11.14-MariaDB", 0)).toBe(true);
+        expect(await run(true, "8.0.40", 3)).toBe(true);
+        expect(await run(false, "8.0.40", 0)).toBe(false);
+    });
+});

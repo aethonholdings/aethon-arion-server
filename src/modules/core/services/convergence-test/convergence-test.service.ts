@@ -1,6 +1,6 @@
 import { forwardRef, Inject, Injectable, Logger } from "@nestjs/common";
 import { DataSource, EntityManager, In } from "typeorm";
-import { ConfiguratorParams, ConvergenceTest, OptimiserState, OrgConfig, SimConfig, SimConfigParams } from "aethon-arion-db";
+import { ConfiguratorParams, ConvergenceTest, OptimiserState, OrgConfig, Run, SimConfig, SimConfigParams } from "aethon-arion-db";
 import {
     ConfiguratorParamData,
     ConfiguratorParamsDTO,
@@ -124,6 +124,10 @@ export class ConvergenceTestService {
                                         .of(optimiserState.id)
                                         .add(existingConvergenceTest.id);
                                 }
+                                if (existingConvergenceTest.state === States.FAILED) {
+                                    await this.reopen(existingConvergenceTest.id, tEntityManager);
+                                    existingConvergenceTest.state = States.RUNNING;
+                                }
                                 return existingConvergenceTest;
                             } else {
                                 // create a new convergence test
@@ -191,6 +195,33 @@ export class ConvergenceTestService {
             });
     }
 
+    /**
+     * Reopens a failed convergence test that a new optimiser state links to: its failed simConfigs are dispatched
+     * again and their failed runs no longer count towards `maxRunFailures` (the run keeps its last `error` message).
+     * Without this, a SimSet created after the cause of the failures was fixed would fail at once on the reused test.
+     */
+    async reopen(convergenceTestId: number, tEntityManager: EntityManager): Promise<void> {
+        const failed: SimConfig[] = await tEntityManager.getRepository(SimConfig).find({
+            where: { convergenceTestId: convergenceTestId, state: States.FAILED },
+            loadEagerRelations: false
+        });
+        this._logger.warn(`Reopening failed convergence test ${convergenceTestId} (${failed.length} failed simConfigs)`);
+        if (failed.length > 0) {
+            const ids: number[] = failed.map((simConfig) => simConfig.id);
+            await tEntityManager
+                .getRepository(Run)
+                .createQueryBuilder()
+                .update()
+                .set({ failedAt: null })
+                .where("simConfigId IN (:...ids) AND resultId IS NULL", { ids })
+                .execute();
+            await tEntityManager
+                .getRepository(SimConfig)
+                .update({ id: In(ids) }, { state: States.RUNNING, end: null });
+        }
+        await tEntityManager.getRepository(ConvergenceTest).update(convergenceTestId, { state: States.RUNNING });
+    }
+
     async touch(convergenceTestId: number, tEntityManager?: EntityManager): Promise<ConvergenceTest> {
         if (!tEntityManager) tEntityManager = this.dataSource.createEntityManager();
         // lock the convergence test row before reading the simConfig aggregates: two transactions completing the
@@ -222,6 +253,7 @@ export class ConvergenceTestService {
                     .addSelect("COUNT(DISTINCT simConfig.orgConfigId)", "orgConfigCount")
                     .addSelect("COUNT(DISTINCT simConfig.id)", "simConfigCount")
                     .addSelect(`SUM(IF(simConfig.state = "${States.COMPLETED}", 1, 0))`, "completedSimConfigCount")
+                    .addSelect(`SUM(IF(simConfig.state = "${States.FAILED}", 1, 0))`, "failedSimConfigCount")
                     .addSelect("SUM(simConfig.runCount)", "resultCount")
                     .addSelect("SUM(simConfig.dispatchedRuns)", "dispatchedRuns")
                     .where("simConfig.convergenceTestId = :convergenceTestId", {
@@ -242,6 +274,7 @@ export class ConvergenceTestService {
                             orgConfigCount: Number(raw?.orgConfigCount ?? 0),
                             simConfigCount: Number(raw?.simConfigCount ?? 0),
                             completedSimConfigCount: Number(raw?.completedSimConfigCount ?? 0),
+                            failedSimConfigCount: Number(raw?.failedSimConfigCount ?? 0),
                             resultCount: Number(raw?.resultCount ?? 0),
                             dispatchedRuns: Number(raw?.dispatchedRuns ?? 0)
                         };
@@ -254,7 +287,9 @@ export class ConvergenceTestService {
 
                         // convergence is only assessed once every simConfig in the test has completed, and only
                         // for tests that have not already converged (late results must not re-open a test)
-                        if (!converged && allSimConfigsCompleted) {
+                        // a simConfig whose runs keep failing fails its convergence test: its points cannot be evaluated
+                        const failed: boolean = simConfigSet.failedSimConfigCount > 0 && !converged;
+                        if (!converged && !failed && allSimConfigsCompleted) {
                             if (!convergenceTest.configuratorParams.multipleOrgConfigs) {
                                 // a single deterministic orgConfig: the simConfig-level convergence is sufficient
                                 converged = true;
@@ -298,7 +333,9 @@ export class ConvergenceTestService {
                         }
                         // we have calculated all the summary statistics and generated any new objects needed,
                         // now we just need to update all the convergence test statistics and save to the database
-                        if (converged) {
+                        if (failed) {
+                            convergenceTest.state = States.FAILED;
+                        } else if (converged) {
                             if (this._dev && !convergenceTest.converged) this._logger.log("Convergence test converged");
                             convergenceTest.state = States.COMPLETED;
                             convergenceTest.converged = true;

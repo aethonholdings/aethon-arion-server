@@ -34,6 +34,32 @@ export class DatabaseService {
     ];
     constructor(private dataSource: DataSource) {}
 
+    /**
+     * Schema synchronisation (database.synchronize). On MariaDB, TypeORM sees every JSON column (stored as LONGTEXT)
+     * as changed and drops and re-creates it, erasing the JSON data of every row (optimiser data, tensors, results)
+     * on each start. There it is only done on an empty database; otherwise use the migrations (migrationsRun).
+     */
+    async onModuleInit() {
+        if (!this._dbConfig.synchronize) return;
+        const [version] = await this.dataSource.query("SELECT VERSION() AS version");
+        const mariaDb: boolean = String(version?.version ?? "").toLowerCase().includes("mariadb");
+        if (mariaDb) {
+            const tables: string[] = this.dataSource.entityMetadatas.map((metadata) => metadata.tableName);
+            const [rows] = await this.dataSource.query(
+                "SELECT COUNT(*) AS n FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name IN (?)",
+                [tables]
+            );
+            if (Number(rows?.n ?? 0) > 0) {
+                this._logger.error(
+                    "database.synchronize is ignored on this MariaDB database: synchronising would erase the data of all " +
+                        "JSON columns. Use the aethon-arion-db migrations (database.migrationsRun) instead."
+                );
+                return;
+            }
+        }
+        await this.dataSource.synchronize();
+    }
+
     async onApplicationBootstrap() {
         // purging is an explicit, development-only opt-in; schema synchronisation alone never deletes data
         if (this._dbConfig.purgeOnStart && this._rootConfig.dev) {

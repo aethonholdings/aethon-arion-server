@@ -8,6 +8,7 @@ import { RootModule } from "../src/modules/root/root.module";
 import { SimSetService } from "../src/modules/core/endpoints/sim-set/sim-set.service";
 import { SimConfigService } from "../src/modules/core/endpoints/sim-config/sim-config.service";
 import { ResultService } from "../src/modules/core/endpoints/result/result.service";
+import { RunService } from "../src/modules/core/endpoints/run/run.service";
 
 /** Data integrity of the dispatch / result workflow under concurrency, retries and late results. */
 describe("Dispatch and result integrity (e2e)", () => {
@@ -55,6 +56,8 @@ describe("Dispatch and result integrity (e2e)", () => {
     });
 
     afterAll(async () => {
+        // leave no active work for the next test file (dispatch is global)
+        await dataSource.query("DELETE FROM sim_set");
         await moduleRef.close();
     });
 
@@ -208,9 +211,59 @@ describe("Dispatch and result integrity (e2e)", () => {
         }
         expect((await dataSource.getRepository(SimSet).findOneByOrFail({ id: simSet.id })).state).toBe(States.COMPLETED);
         expect(await dataSource.query("SELECT COUNT(*) AS n FROM optimiser_state WHERE simSetId = ?", [simSet.id])).toEqual([{ n: "1" }]);
-        const orgConfig = await dataSource.getRepository(OrgConfig).findOne({ where: {}, order: { id: "DESC" } });
+        // the newest org config of this SimSet (other data may be in the database)
+        const [{ id }] = await dataSource.query(
+            `SELECT MAX(simConfig.orgConfigId) AS id FROM sim_config simConfig
+             JOIN optimiser_state_convergence_tests_convergence_test link ON link.convergenceTestId = simConfig.convergenceTestId
+             JOIN optimiser_state optimiserState ON optimiserState.id = link.optimiserStateId
+             WHERE optimiserState.simSetId = ?`,
+            [simSet.id]
+        );
+        const orgConfig = await dataSource.getRepository(OrgConfig).findOneByOrFail({ id: Number(id) });
         expect(orgConfig.diagnostics.stable).toBe(true);
         expect(orgConfig.diagnostics.consensusTimeHours).toBeGreaterThan(0);
+    });
+
+    it("fails a simConfig whose runs keep failing, and its convergence test, optimiser state and SimSet", async () => {
+        await dataSource.query("DELETE FROM sim_set");
+        const simSet = await simSetService.create({ modelName: "C1", description: "failing", simConfigParams: { days: 6, randomStreamType: "random" }, optimiserParams: optimiserParams() } as any);
+        const runService = moduleRef.get(RunService);
+        const first = await simConfigService.next("crash");
+        const target = first.id;
+        let outcome: any;
+        for (const job of [first, await simConfigService.next("crash"), await simConfigService.next("crash")]) {
+            expect(job.id).toBe(target); // the same lowest unconverged simConfig is handed out again
+            outcome = await runService.fail(job.runId, "simulation crashed");
+        }
+        expect(outcome.failedRuns).toBe(3);
+        expect(outcome.simConfigFailed).toBe(true);
+        // reporting the same run again changes nothing
+        expect((await runService.fail(first.runId, "again")).failedRuns).toBe(3);
+        const simConfig = await dataSource.getRepository(SimConfig).findOneByOrFail({ id: target });
+        expect(simConfig.state).toBe(States.FAILED);
+        const [test] = await dataSource.query("SELECT state FROM convergence_test WHERE id = ?", [simConfig.convergenceTestId]);
+        expect(test.state).toBe(States.FAILED);
+        const [state] = await dataSource.query("SELECT status FROM optimiser_state WHERE simSetId = ?", [simSet.id]);
+        expect(state.status).toBe(States.FAILED);
+        expect((await dataSource.getRepository(SimSet).findOneByOrFail({ id: simSet.id })).state).toBe(States.FAILED);
+        // nothing of the failed SimSet is dispatched any more
+        expect(await simConfigService.next("crash")).toBeNull();
+
+        // a new SimSet with the same parameters reuses the convergence test and reopens it
+        const retry = await simSetService.create({ modelName: "C1", description: "failing, retried", simConfigParams: { days: 6, randomStreamType: "random" }, optimiserParams: optimiserParams() } as any);
+        const reopened = await simConfigService.next("fixed");
+        expect(reopened.id).toBe(target);
+        expect((await dataSource.getRepository(SimConfig).findOneByOrFail({ id: target })).state).toBe(States.RUNNING);
+        expect((await runService.fail(reopened.runId, "crashed once more")).failedRuns).toBe(1); // earlier failures no longer count
+        const [retryState] = await dataSource.query("SELECT status FROM optimiser_state WHERE simSetId = ?", [retry.id]);
+        expect(retryState.status).not.toBe(States.FAILED);
+    });
+
+    it("refuses a failure report for a run that already has a result", async () => {
+        await simSetService.create({ modelName: "C1", description: "ok", simConfigParams: { days: 7, randomStreamType: "random" }, optimiserParams: optimiserParams() } as any);
+        const job = await simConfigService.next("ok");
+        await resultService.create(await simulate(job));
+        await expect(moduleRef.get(RunService).fail(job.runId, "late crash")).rejects.toThrow(/already has a result/);
     });
 
     it("rejects invalid optimiser parameters", async () => {

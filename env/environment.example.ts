@@ -29,6 +29,7 @@ export default () =>
             maxOrgConfigs: 200,
             minSimRuns: 10,
             maxSimRuns: 1000,
+            maxRunFailures: 3,
             randomStreamType: "random",
             simulationDays: 100,
             // this following casting is an inexplicable issue with Typescript compilation on inheritance with protected variables

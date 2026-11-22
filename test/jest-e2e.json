@@ -6,12 +6,16 @@
   ],
   "rootDir": ".",
   "moduleNameMapper": {
-      "^src/(.*)$": "<rootDir>/../src/$1",
-      "^env/(.*)$": "<rootDir>/../env/$1"
-    },
+    "^src/(.*)$": "<rootDir>/../src/$1",
+    "^env/(.*)$": "<rootDir>/../env/$1"
+  },
   "testEnvironment": "node",
   "testRegex": ".e2e.spec.ts$",
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
-  }
+  },
+  "globalSetup": "<rootDir>/e2e-database.ts",
+  "setupFiles": [
+    "<rootDir>/e2e-env.ts"
+  ]
 }

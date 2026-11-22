@@ -31,6 +31,7 @@ export default () =>
             maxOrgConfigs: 200,
             minSimRuns: 3,
             maxSimRuns: 1000,
+            maxRunFailures: 3,
             randomStreamType: "random",
             simulationDays: 1,
             models: [C1 as unknown as Model]

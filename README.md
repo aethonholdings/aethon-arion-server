@@ -43,6 +43,7 @@ export interface ServerEnvironment {
         convergenceAbsoluteError?: number;          // absolute standard error floor for means near 0 (default 0)
         minSimRuns: number;                         // minimum runs per simulation config
         maxSimRuns?: number;                        // cap on runs per simulation config (default 1000)
+        maxRunFailures?: number;                    // failed runs reported by nodes before a simulation config is failed (default 3)
         minOrgConfigs: number;                      // minimum org configs per convergence test
         maxOrgConfigs?: number;                     // cap on org configs per convergence test (default 200)
         randomStreamType: "static" | "random";      // default random stream generator; static is useful for testing
@@ -57,7 +58,16 @@ The schema is managed by the migrations shipped in `aethon-arion-db` (exported a
 
 - On a database created earlier with `synchronize`, the baseline migration detects the existing schema and is only recorded as applied.
 - `RunTicketsDoublePrecision` adds the `run` table (dispatch tickets), `result.runId` / `result.late`, `configurator_params.modelVersion` and a dispatch index. It also converts performance and duration columns to `double` in place (`MODIFY COLUMN`, no data loss).
-- `purgeOnStart: true` truncates every table on startup, and only in a `dev` environment. `synchronize` alone never deletes data.
+- `purgeOnStart: true` truncates every table on startup, and only in a `dev` environment.
+- `synchronize` runs only on a database without the Arion tables when the server is on MariaDB: TypeORM's synchronize drops and re-creates JSON columns there (MariaDB stores them as LONGTEXT and TypeORM sees a type change), which erases their data on every start. On MySQL it runs as configured.
+
+## Failed runs
+
+A node that cannot complete a run reports it with `POST /arion/run/:id/failure`. After `maxRunFailures` failed runs the simulation config is failed and no longer dispatched (otherwise a config that crashes every node would block the queue), and its convergence test, optimiser state and SimSet are failed. A later SimSet with the same parameters reuses the convergence test and reopens it: its failed simulation configs are dispatched again and their earlier failures no longer count.
+
+## Tests
+
+`npm run test:unit` and `npm run test:e2e:ci` need a MySQL or MariaDB server (`ARION_DB_HOST`, `ARION_DB_PORT`, `ARION_DB_USER`, `ARION_DB_PASSWORD`, `ARION_DB_NAME`; run `npm run test:setup` first). The e2e suites use their own database, `<ARION_DB_NAME>_e2e`, recreated empty at the start of each run.
 
 ## Convergence
 
