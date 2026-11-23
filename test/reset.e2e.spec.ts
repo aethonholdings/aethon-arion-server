@@ -40,9 +40,9 @@ describe("Database reset (e2e)", () => {
         await admin.destroy();
     });
 
-    it("empties the database and leaves the schema at the current migration", async () => {
+    it("with --delete-auth, empties the database entirely and leaves the schema at the current migration", async () => {
         await seed();
-        const summary = await resetDatabase(ds);
+        const summary = await resetDatabase(ds, { keepAuth: false });
         expect(summary.droppedTables).toContain("stray");
         expect(summary.appliedMigrations.length).toBe(migrations.length);
         expect(await ds.showMigrations()).toBe(false); // nothing pending
@@ -54,10 +54,10 @@ describe("Database reset (e2e)", () => {
         }
     });
 
-    it("keeps operator accounts and authorised nodes with --keep-auth", async () => {
+    it("by default, empties the database but keeps operator accounts and authorised nodes", async () => {
         await seed();
         const node = await ds.getRepository(AuthorisedNode).findOneByOrFail({ id: "machine-1" });
-        const summary = await resetDatabase(ds, { keepAuth: true });
+        const summary = await resetDatabase(ds);
         expect(summary.keptRows).toEqual({ user: 1, authorised_node: 1 });
         expect(await count("sim_config_params")).toBe(0);
         const user = await ds.getRepository(User).findOneByOrFail({ username: "operator" });

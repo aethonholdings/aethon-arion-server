@@ -62,7 +62,7 @@ The schema is managed by the migrations shipped in `aethon-arion-db` (exported a
 
 - On a database created earlier with `synchronize`, the baseline migration detects the existing schema and is only recorded as applied.
 - `RunTicketsDoublePrecision` adds the `run` table (dispatch tickets), `result.runId` / `result.late`, `configurator_params.modelVersion` and a dispatch index. It also converts performance and duration columns to `double` in place (`MODIFY COLUMN`, no data loss).
-- `npm run db:reset` re-initialises the database from the command line: it drops every table, then applies all migrations, leaving an empty database at the current schema version. It asks you to type the database name (`-- --yes` skips this for scripts). Operator accounts and authorised nodes are deleted too, so every node must log in again, unless you pass `-- --keep-auth`. Stop the server first.
+- `npm run db:reset` re-initialises the database from the command line: it drops every table, then applies all migrations, leaving an empty database at the current schema version. It asks you to type the database name (`-- --yes` skips this for scripts). Operator accounts and authorised nodes are kept, so nodes keep working; `-- --delete-auth` deletes them too, after which a user must be created again and every node must log in again. Stop the server first.
 - `purgeOnStart: true` truncates every table on startup, and only in a `dev` environment.
 - `synchronize` runs only on a database without the Arion tables when the server is on MariaDB: TypeORM's synchronize drops and re-creates JSON columns there (MariaDB stores them as LONGTEXT and TypeORM sees a type change), which erases their data on every start. On MySQL it runs as configured.
 
@@ -102,7 +102,7 @@ Nodes must be authorised before the server hands them work. The node endpoints (
 | `npm run user:disable <username>` | Stops the account authorising nodes; nodes it authorised keep their keys |
 | `npm run node:list` | Lists authorised nodes |
 | `npm run node:revoke <id>` | Revokes a node's key; the node stops and must log in again |
-| `npm run db:reset -- [--keep-auth] [--yes]` | Empties and re-initialises the database (see Database migrations) |
+| `npm run db:reset -- [--delete-auth] [--yes]` | Empties and re-initialises the database (see Database migrations) |
 
 | Rule | Detail |
 |---|---|

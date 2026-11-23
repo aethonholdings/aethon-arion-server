@@ -13,10 +13,10 @@ import { resetDatabase } from "./reset";
  *   user:disable <username>  disable an account (nodes it authorised keep their keys until revoked)
  *   node:list                list authorised nodes
  *   node:revoke <node id>    revoke a node's key; the node must be authorised again
- *   db:reset [--keep-auth] [--yes]
- *                            re-initialise the database: drop every table and apply all migrations, leaving it empty;
- *                            --keep-auth keeps operator accounts and authorised nodes; asks to type the database
- *                            name unless --yes. Stop the server first.
+ *   db:reset [--delete-auth] [--yes]
+ *                            re-initialise the database: drop every table and apply all migrations, leaving it empty
+ *                            except for operator accounts and authorised nodes, which --delete-auth deletes too;
+ *                            asks to type the database name unless --yes. Stop the server first.
  *
  * Uses the database of env/environment.ts; the user and authorised_node tables come from the aethon-arion-db
  * migrations.
@@ -78,9 +78,9 @@ async function main(command: string, args: string[]): Promise<void> {
             }
             case "db:reset": {
                 const flags = args.filter((arg) => arg.startsWith("--"));
-                const unknown = flags.filter((flag) => !["--keep-auth", "--yes"].includes(flag));
-                if (unknown.length > 0) throw new Error(`Unknown option ${unknown.join(", ")}. Usage: npm run db:reset -- [--keep-auth] [--yes]`);
-                const keepAuth = flags.includes("--keep-auth");
+                const unknown = flags.filter((flag) => !["--delete-auth", "--yes"].includes(flag));
+                if (unknown.length > 0) throw new Error(`Unknown option ${unknown.join(", ")}. Usage: npm run db:reset -- [--delete-auth] [--yes]`);
+                const keepAuth = !flags.includes("--delete-auth");
                 console.log(`This deletes ALL data in database ${database.database} on ${database.host}:${database.port}` +
                     (keepAuth ? " except operator accounts and authorised nodes" : ", including operator accounts and authorised nodes (every node must log in again)") +
                     ". Stop the server first.");
@@ -94,7 +94,7 @@ async function main(command: string, args: string[]): Promise<void> {
                 break;
             }
             default:
-                throw new Error("Commands: user:create [username], user:disable <username>, node:list, node:revoke <node id>, db:reset [--keep-auth] [--yes]");
+                throw new Error("Commands: user:create [username], user:disable <username>, node:list, node:revoke <node id>, db:reset [--delete-auth] [--yes]");
         }
     } finally {
         await dataSource.destroy();
