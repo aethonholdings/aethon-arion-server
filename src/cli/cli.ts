@@ -21,6 +21,18 @@ import { resetDatabase } from "./reset";
  * Uses the database of env/environment.ts; the user and authorised_node tables come from the aethon-arion-db
  * migrations.
  */
+/** Asks for a new account's username and password (twice; ARION_USER_PASSWORD instead, for scripts) and checks them. */
+async function askNewUser(username?: string): Promise<{ username: string; password: string }> {
+    username = username || (await prompt("Username: "));
+    let password = process.env.ARION_USER_PASSWORD ?? "";
+    if (!password) {
+        password = await prompt("Password: ", true);
+        if ((await prompt("Repeat password: ", true)) !== password) throw new Error("The passwords do not match");
+    }
+    AuthService.validateNewUser(username, password);
+    return { username, password };
+}
+
 async function main(command: string, args: string[]): Promise<void> {
     const database = environment().database;
     const dataSource = await new DataSource({
@@ -38,12 +50,7 @@ async function main(command: string, args: string[]): Promise<void> {
     try {
         switch (command) {
             case "user:create": {
-                const username = args[0] || (await prompt("Username: "));
-                let password = process.env.ARION_USER_PASSWORD ?? "";
-                if (!password) {
-                    password = await prompt("Password: ", true);
-                    if ((await prompt("Repeat password: ", true)) !== password) throw new Error("The passwords do not match");
-                }
+                const { username, password } = await askNewUser(args[0]);
                 const user = await auth.createUser(username, password);
                 console.log(`User ${user.username} created (id ${user.id})`);
                 break;
@@ -88,9 +95,22 @@ async function main(command: string, args: string[]): Promise<void> {
                     const answer = await prompt(`Type the database name (${database.database}) to confirm: `);
                     if (answer !== database.database) throw new Error("Not confirmed; nothing was changed");
                 }
+                // without accounts no node could be authorised: the new admin account is asked for (and checked)
+                // before anything is deleted, and created once the tables are rebuilt
+                let admin: { username: string; password: string } | null = null;
+                if (!keepAuth) {
+                    console.log("Operator accounts are deleted: enter a new admin account.");
+                    admin = await askNewUser();
+                }
                 const summary = await resetDatabase(dataSource, { keepAuth });
                 console.log(`Dropped ${summary.droppedTables.length} tables; applied ${summary.appliedMigrations.length} migrations` +
                     (keepAuth ? `; kept ${summary.keptRows["user"] ?? 0} users and ${summary.keptRows["authorised_node"] ?? 0} authorised nodes` : ""));
+                if (admin) {
+                    const user = await auth.createUser(admin.username, admin.password);
+                    console.log(`Admin user ${user.username} created; every node must log in again`);
+                } else if ((summary.keptRows["user"] ?? 0) === 0) {
+                    console.log("There is no operator account: create one with `npm run user:create` before nodes log in");
+                }
                 break;
             }
             default:

@@ -79,3 +79,32 @@ describe("Node authentication: AuthService.touch", () => {
         expect(update).toHaveBeenCalledTimes(2);
     });
 });
+
+describe("Node authentication: startup check", () => {
+    const withUsers = (count: () => Promise<number>) => {
+        const auth = new AuthService({ getRepository: () => ({ count }) } as any);
+        const warn = jest.spyOn((auth as any)._logger, "warn").mockImplementation(() => undefined);
+        return { auth, warn };
+    };
+
+    it("warns when no operator account exists", async () => {
+        const { auth, warn } = withUsers(async () => 0);
+        await auth.onApplicationBootstrap();
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining("npm run user:create"));
+    });
+
+    it("is silent when an account exists, and warns when the tables are missing", async () => {
+        const ok = withUsers(async () => 1);
+        await ok.auth.onApplicationBootstrap();
+        expect(ok.warn).not.toHaveBeenCalled();
+        const missing = withUsers(async () => Promise.reject(new Error("Table 'user' doesn't exist")));
+        await missing.auth.onApplicationBootstrap();
+        expect(missing.warn).toHaveBeenCalledWith(expect.stringContaining("migrations"));
+    });
+
+    it("checks new accounts before anything is changed", () => {
+        expect(() => AuthService.validateNewUser("admin", "long-enough-pw")).not.toThrow();
+        expect(() => AuthService.validateNewUser("ad min", "long-enough-pw")).toThrow(/username/);
+        expect(() => AuthService.validateNewUser("admin", "short")).toThrow(/10 characters/);
+    });
+});

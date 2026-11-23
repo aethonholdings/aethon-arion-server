@@ -1,6 +1,7 @@
-import { Injectable, Logger, UnauthorizedException } from "@nestjs/common";
+import { Injectable, Logger, OnApplicationBootstrap, UnauthorizedException } from "@nestjs/common";
 import { DataSource, IsNull } from "typeorm";
 import { AuthorisedNode, User } from "aethon-arion-db";
+import environment from "../../../env/environment";
 import { DUMMY_PASSWORD_HASH, generateKey, hashKey, hashPassword, verifyPassword } from "./credentials";
 
 export type NodeAuthorisation = { nodeId: string; key: string; authorisedAt: Date };
@@ -10,10 +11,26 @@ const LAST_SEEN_INTERVAL_MS = 60000;
 
 /** Operator accounts and authorised nodes. Used by the HTTP layer and by the server command line. */
 @Injectable()
-export class AuthService {
+export class AuthService implements OnApplicationBootstrap {
     private _logger: Logger = new Logger(AuthService.name);
 
     constructor(private dataSource: DataSource) {}
+
+    /** Warns at startup when nodes cannot be authorised: no operator account exists, or the tables are missing. */
+    async onApplicationBootstrap(): Promise<void> {
+        if ((environment().auth?.nodes ?? "required") === "off") return;
+        try {
+            if ((await this.countUsers()) === 0) {
+                this._logger.warn(
+                    "No operator account exists, so no node can be authorised: create one with `npm run user:create`"
+                );
+            }
+        } catch (error) {
+            this._logger.warn(
+                `Node authentication tables are not available (${(error as Error)?.message}): apply the aethon-arion-db migrations`
+            );
+        }
+    }
 
     /**
      * Authorises a node with an operator's credentials and returns a new key, the only time it is sent. A node that
@@ -58,9 +75,18 @@ export class AuthService {
 
     // ------------------------------------------------------------------ administration (server command line)
 
-    async createUser(username: string, password: string): Promise<User> {
+    /** Throws when a username or password does not meet the account rules. */
+    static validateNewUser(username: string, password: string): void {
         if (!/^[A-Za-z0-9._@-]{1,64}$/.test(username)) throw new Error("A username has 1 to 64 letters, digits or . _ @ -");
         if (password.length < 10) throw new Error("A password has at least 10 characters");
+    }
+
+    async countUsers(): Promise<number> {
+        return this.dataSource.getRepository(User).count();
+    }
+
+    async createUser(username: string, password: string): Promise<User> {
+        AuthService.validateNewUser(username, password);
         if (await this.dataSource.getRepository(User).findOne({ where: { username } })) {
             throw new Error(`User ${username} already exists`);
         }

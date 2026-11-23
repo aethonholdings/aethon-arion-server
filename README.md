@@ -62,7 +62,7 @@ The schema is managed by the migrations shipped in `aethon-arion-db` (exported a
 
 - On a database created earlier with `synchronize`, the baseline migration detects the existing schema and is only recorded as applied.
 - `RunTicketsDoublePrecision` adds the `run` table (dispatch tickets), `result.runId` / `result.late`, `configurator_params.modelVersion` and a dispatch index. It also converts performance and duration columns to `double` in place (`MODIFY COLUMN`, no data loss).
-- `npm run db:reset` re-initialises the database from the command line: it drops every table, then applies all migrations, leaving an empty database at the current schema version. It asks you to type the database name (`-- --yes` skips this for scripts). Operator accounts and authorised nodes are kept, so nodes keep working; `-- --delete-auth` deletes them too, after which a user must be created again and every node must log in again. Stop the server first.
+- `npm run db:reset` re-initialises the database from the command line: it drops every table, then applies all migrations, leaving an empty database at the current schema version. It asks you to type the database name (`-- --yes` skips this for scripts). Operator accounts and authorised nodes are kept, so nodes keep working. `-- --delete-auth` deletes them too: it then asks for a new admin account before deleting anything, creates it after the rebuild, and every node must log in again. Stop the server first.
 - `purgeOnStart: true` truncates every table on startup, and only in a `dev` environment.
 - `synchronize` runs only on a database without the Arion tables when the server is on MariaDB: TypeORM's synchronize drops and re-creates JSON columns there (MariaDB stores them as LONGTEXT and TypeORM sees a type change), which erases their data on every start. On MySQL it runs as configured.
 
@@ -92,7 +92,7 @@ Org config k of a convergence test is generated from seed (base seed, k), and ru
 
 Nodes must be authorised before the server hands them work. The node endpoints (`GET /arion/sim-config/next`, `POST /arion/result`, `POST /arion/run/:id/failure`) require `Authorization: Bearer <key>`; the analyst's endpoints are not restricted.
 
-1. Create an operator account on the server: `npm run user:create` (prompts for the username and the password; at least 10 characters).
+1. Create an operator account on the server: `npm run user:create` (prompts for the username and the password; at least 10 characters). Until one exists, the server logs a warning at startup, since no node can be authorised.
 2. On each node, run `npm run login`: it asks for the server address and the operator's credentials, and `POST /arion/auth/node` returns a key bound to the node's machine id. Only the SHA-256 hash of the key is stored, in the `authorised_node` table, with the node's hostname, the time it was authorised, the operator who authorised it and when it was last seen.
 3. Manage nodes from the command line:
 
