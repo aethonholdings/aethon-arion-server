@@ -28,7 +28,8 @@
     "user:create": "node -r ts-node/register/transpile-only -r tsconfig-paths/register src/cli/cli.ts user:create",
     "user:disable": "node -r ts-node/register/transpile-only -r tsconfig-paths/register src/cli/cli.ts user:disable",
     "node:list": "node -r ts-node/register/transpile-only -r tsconfig-paths/register src/cli/cli.ts node:list",
-    "node:revoke": "node -r ts-node/register/transpile-only -r tsconfig-paths/register src/cli/cli.ts node:revoke"
+    "node:revoke": "node -r ts-node/register/transpile-only -r tsconfig-paths/register src/cli/cli.ts node:revoke",
+    "db:reset": "node -r ts-node/register/transpile-only -r tsconfig-paths/register src/cli/cli.ts db:reset"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.10",
