@@ -1,3 +1,4 @@
+import { NodeAuth } from "../../../auth/node-auth.decorator";
 import { Body, Controller, Delete, Get, Param, Post, Query, Req, ParseIntPipe } from "@nestjs/common";
 import { SimConfigService } from "./sim-config.service";
 import { ApiBody, ApiOkResponse, ApiParam, ApiQuery, ApiTags } from "@nestjs/swagger";
@@ -29,6 +30,7 @@ export class SimConfigController {
 
     // endpoint that fetches the next SimConfig to be run
     @Get("next")
+    @NodeAuth()
     @ApiQuery({
         name: "nodeId",
         type: String,

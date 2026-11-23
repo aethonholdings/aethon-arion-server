@@ -17,8 +17,10 @@ import { OptimiserStateService } from "./endpoints/optimiser-state/optimiser-sta
 import { OptimiserStateController } from "./endpoints/optimiser-state/optimiser-state.controller";
 import { RunController } from "./endpoints/run/run.controller";
 import { RunService } from "./endpoints/run/run.service";
+import { AuthModule } from "../auth/auth.module";
 
 @Module({
+    imports: [AuthModule],
     controllers: [
         SimConfigController,
         ResultController,

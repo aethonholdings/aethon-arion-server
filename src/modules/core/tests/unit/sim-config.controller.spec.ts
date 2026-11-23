@@ -1,3 +1,4 @@
+import { AuthService } from "src/modules/auth/auth.service";
 import { environment } from "../environment/test.environment";
 import { Test, TestingModule } from "@nestjs/testing";
 import { DataSource } from "typeorm";
@@ -23,6 +24,7 @@ describe("Model module: SimConfigController", () => {
         imports: [TypeOrmModule.forRoot(env.database), TypeOrmModule.forFeature([SimConfig])],
         controllers: [SimConfigController],
         providers: [
+            { provide: AuthService, useValue: { verifyKey: jest.fn(), touch: jest.fn() } },
             SimConfigService,
             ModelService,
             { provide: ConvergenceTestService, useValue: { touch: jest.fn(), create: jest.fn() } },

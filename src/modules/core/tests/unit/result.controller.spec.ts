@@ -1,3 +1,4 @@
+import { AuthService } from "src/modules/auth/auth.service";
 import { environment } from "../environment/test.environment";
 import { Test, TestingModule } from "@nestjs/testing";
 import { ResultController } from "../../endpoints/result/result.controller";
@@ -18,6 +19,7 @@ describe("Model module: ResultsController", () => {
         imports: [TypeOrmModule.forRoot(env.database), TypeOrmModule.forFeature([Result])],
         controllers: [ResultController],
         providers: [
+            { provide: AuthService, useValue: { verifyKey: jest.fn(), touch: jest.fn() } },
             ResultService,
             ModelService,
             { provide: ConvergenceTestService, useValue: { touch: jest.fn(), create: jest.fn() } }

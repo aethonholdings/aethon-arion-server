@@ -40,6 +40,9 @@ async function bootstrap() {
         .addTag("StateSpace")
         .addTag("OptimiserState")
         .addTag("OpenAPI")
+        .addTag("Auth")
+        .addTag("Run")
+        .addBearerAuth()
         .build();
     const document = SwaggerModule.createDocument(app, config);
     if (env.root.dev) {

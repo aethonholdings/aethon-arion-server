@@ -35,5 +35,6 @@ export default () =>
             randomStreamType: "random",
             simulationDays: 1,
             models: [C1 as unknown as Model]
-        }
+        },
+        auth: { nodes: "required", loginAttemptsPerMinute: 20 }
     }) as ServerEnvironment;

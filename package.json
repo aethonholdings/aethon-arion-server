@@ -24,7 +24,11 @@
     "doc": "npx openapi-to-md ./swagger/open-api.json ./docs/api.md",
     "test:setup": "cp env/environment.ci.ts env/environment.ts",
     "test:unit": "jest src --testTimeout=30000",
-    "test:e2e:ci": "jest --config ./test/jest-e2e.json --runInBand"
+    "test:e2e:ci": "jest --config ./test/jest-e2e.json --runInBand",
+    "user:create": "node -r ts-node/register/transpile-only -r tsconfig-paths/register src/cli/cli.ts user:create",
+    "user:disable": "node -r ts-node/register/transpile-only -r tsconfig-paths/register src/cli/cli.ts user:disable",
+    "node:list": "node -r ts-node/register/transpile-only -r tsconfig-paths/register src/cli/cli.ts node:list",
+    "node:revoke": "node -r ts-node/register/transpile-only -r tsconfig-paths/register src/cli/cli.ts node:revoke"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.10",
@@ -34,6 +38,7 @@
     "@nestjs/platform-express": "^10.3.10",
     "@nestjs/schedule": "^5.0.1",
     "@nestjs/swagger": "^7.4.0",
+    "@nestjs/throttler": "^6.8.0",
     "@nestjs/typeorm": "^10.0.2",
     "aethon-api-types": "^0.0.4",
     "aethon-arion-c1": "^0.5.0",

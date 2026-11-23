@@ -76,7 +76,10 @@ export class DatabaseService {
         await queryRunner.connect();
         try {
             await queryRunner.query(`SET FOREIGN_KEY_CHECKS = 0;`);
-            const tables: string[] = this.dataSource.entityMetadatas.map((metadata) => metadata.tableName);
+            // operator accounts and authorised nodes are kept: purging them would lock every node out
+            const tables: string[] = this.dataSource.entityMetadatas
+                .map((metadata) => metadata.tableName)
+                .filter((table) => !["user", "authorised_node"].includes(table));
             for (const table of tables) {
                 await queryRunner.query(`TRUNCATE \`${table}\`;`);
             }

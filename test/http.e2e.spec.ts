@@ -9,6 +9,7 @@ import { DomainTypes, Logger, RandomStreamFactory } from "aethon-arion-pipeline"
 import { Result } from "aethon-arion-db";
 import { RootModule } from "../src/modules/root/root.module";
 import { SimSetService } from "../src/modules/core/endpoints/sim-set/sim-set.service";
+import { AuthService } from "../src/modules/auth/auth.service";
 import { DefaultExceptionFilter } from "../src/common/filters/default-exception/default-exception.filter";
 import { APIRequestInterceptor } from "../src/common/interceptors/api-request/api-request.interceptor";
 
@@ -16,6 +17,7 @@ import { APIRequestInterceptor } from "../src/common/interceptors/api-request/ap
 describe("Node protocol over HTTP (e2e)", () => {
     jest.setTimeout(120000);
     let app: INestApplication;
+    let bearer: string; // Authorization header of the authorised test node "http"
 
     beforeAll(async () => {
         const moduleRef = await Test.createTestingModule({ imports: [RootModule] }).compile();
@@ -26,6 +28,9 @@ describe("Node protocol over HTTP (e2e)", () => {
         app.useGlobalFilters(new DefaultExceptionFilter());
         app.useGlobalInterceptors(new APIRequestInterceptor());
         await app.init();
+        const auth = app.get(AuthService);
+        await auth.createUser("http-operator", "http-operator-password");
+        bearer = "Bearer " + (await auth.authoriseNode("http", "test", "http-operator", "http-operator-password")).key;
         await app.get(SimSetService).create({
             modelName: "C1",
             description: "http",
@@ -44,7 +49,7 @@ describe("Node protocol over HTTP (e2e)", () => {
     });
 
     it("hands out run tickets and records results idempotently", async () => {
-        const next = await request(app.getHttpServer()).get("/arion/sim-config/next").query({ nodeId: "http" });
+        const next = await request(app.getHttpServer()).get("/arion/sim-config/next").set("Authorization", bearer).query({ nodeId: "http" });
         expect(next.status).toBe(200);
         const job = next.body.payload;
         expect(Number.isInteger(job.runId)).toBe(true);
@@ -54,9 +59,9 @@ describe("Node protocol over HTTP (e2e)", () => {
             C1.run$(job, RandomStreamFactory.seeded(...job.seedKeys), new Logger(), "http")
         );
         const body = JSON.parse(JSON.stringify(result));
-        const first = await request(app.getHttpServer()).post("/arion/result").send(body);
+        const first = await request(app.getHttpServer()).post("/arion/result").set("Authorization", bearer).send(body);
         expect(first.status).toBe(201);
-        const second = await request(app.getHttpServer()).post("/arion/result").send(body);
+        const second = await request(app.getHttpServer()).post("/arion/result").set("Authorization", bearer).send(body);
         expect(second.status).toBe(201);
         expect(second.body.payload.id).toBe(first.body.payload.id);
         const stored = await app.get(DataSource).getRepository(Result).findOneByOrFail({ id: first.body.payload.id });
@@ -64,13 +69,13 @@ describe("Node protocol over HTTP (e2e)", () => {
     });
 
     it("rejects a result whose run ticket belongs to another simConfig", async () => {
-        const next = await request(app.getHttpServer()).get("/arion/sim-config/next").query({ nodeId: "http" });
+        const next = await request(app.getHttpServer()).get("/arion/sim-config/next").set("Authorization", bearer).query({ nodeId: "http" });
         const job = next.body.payload;
         const result = await lastValueFrom(
             C1.run$(job, RandomStreamFactory.seeded(...job.seedKeys), new Logger(), "http")
         );
         const body = { ...JSON.parse(JSON.stringify(result)), runId: 999999 };
-        const response = await request(app.getHttpServer()).post("/arion/result").send(body);
+        const response = await request(app.getHttpServer()).post("/arion/result").set("Authorization", bearer).send(body);
         expect(response.status).toBe(400);
     });
 
@@ -100,11 +105,11 @@ describe("Node protocol over HTTP (e2e)", () => {
     });
 
     it("accepts a node's failure report for a run and 404s an unknown run", async () => {
-        const job = (await request(app.getHttpServer()).get("/arion/sim-config/next").query({ nodeId: "http" })).body.payload;
-        const response = await request(app.getHttpServer()).post(`/arion/run/${job.runId}/failure`).send({ error: "boom" });
+        const job = (await request(app.getHttpServer()).get("/arion/sim-config/next").set("Authorization", bearer).query({ nodeId: "http" })).body.payload;
+        const response = await request(app.getHttpServer()).post(`/arion/run/${job.runId}/failure`).set("Authorization", bearer).send({ error: "boom" });
         expect(response.status).toBe(201);
         expect(response.body.payload.failedRuns).toBe(1);
-        expect((await request(app.getHttpServer()).post("/arion/run/999999/failure").send({ error: "x" })).status).toBe(404);
+        expect((await request(app.getHttpServer()).post("/arion/run/999999/failure").set("Authorization", bearer).send({ error: "x" })).status).toBe(404);
     });
 
     it("returns 404 for a missing record", async () => {

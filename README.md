@@ -49,6 +49,10 @@ export interface ServerEnvironment {
         randomStreamType: "static" | "random";      // default random stream generator; static is useful for testing
         simulationDays: number;                     // default number of simulation days
     }
+    auth?: {
+        nodes?: "required" | "off";                 // "off" admits nodes without a key, while existing nodes are switched over (default "required")
+        loginAttemptsPerMinute?: number;            // POST /auth/node attempts per client address per minute (default 5)
+    }
 }
 ```
 
@@ -82,6 +86,32 @@ Org config k of a convergence test is generated from seed (base seed, k), and ru
 - The optimiser stops when the gradient is confidently small: the norm of |slope| + 2 SE over the parameters is below `iterations.tolerance`.
 - Gradients are paired differences between optimiser points over matched org config replicates, which share their random draws.
 - The SimSet ends after `iterations.max` optimiser states when that is set, or when a step would revisit points the SimSet has already evaluated.
+
+## Node authentication
+
+Nodes must be authorised before the server hands them work. The node endpoints (`GET /arion/sim-config/next`, `POST /arion/result`, `POST /arion/run/:id/failure`) require `Authorization: Bearer <key>`; the analyst's endpoints are not restricted.
+
+1. Create an operator account on the server: `npm run user:create` (prompts for the username and the password; at least 10 characters).
+2. On each node, run `npm run login`: it asks for the server address and the operator's credentials, and `POST /arion/auth/node` returns a key bound to the node's machine id. Only the SHA-256 hash of the key is stored, in the `authorised_node` table, with the node's hostname, the time it was authorised, the operator who authorised it and when it was last seen.
+3. Manage nodes from the command line:
+
+| Command | Effect |
+|---|---|
+| `npm run user:create [username]` | Creates an operator account (`ARION_USER_PASSWORD` instead of the prompt, for scripts) |
+| `npm run user:disable <username>` | Stops the account authorising nodes; nodes it authorised keep their keys |
+| `npm run node:list` | Lists authorised nodes |
+| `npm run node:revoke <id>` | Revokes a node's key; the node stops and must log in again |
+
+| Rule | Detail |
+|---|---|
+| Expiry | None: a key is valid until revoked or replaced by a new authorisation of the same machine |
+| Node ids | A `nodeId` in a request must be the key's machine id or `<machine id>:<instance>`, otherwise `403` |
+| Login attempts | `auth.loginAttemptsPerMinute` per client address (default 5), then `429` |
+| Passwords | scrypt with a random salt; a wrong password, an unknown user and a disabled user get the same `401` |
+| Switch-over | `auth.nodes: "off"` admits nodes without a key, while existing nodes are authorised; the default is `"required"` |
+| Transport | Run the server behind TLS: the password and the key are sent in the clear over plain http |
+
+The `user` and `authorised_node` tables come from the `NodeAuth` migration in `aethon-arion-db`. `purgeOnStart` keeps them.
 
 ## Node protocol
 

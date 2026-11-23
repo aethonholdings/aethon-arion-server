@@ -1,3 +1,4 @@
+import { NodeAuth } from "../../../auth/node-auth.decorator";
 import { Controller, Get, Post, Body, Param, ParseIntPipe } from "@nestjs/common";
 import { ResultService } from "./result.service";
 import { ResultDTO } from "aethon-arion-pipeline";
@@ -45,6 +46,7 @@ export class ResultController {
 
     // endpoint that creates a new result
     @Post()
+    @NodeAuth()
     @ApiBody({
         type: ResultDTOCreate,
         description: "The result to create"

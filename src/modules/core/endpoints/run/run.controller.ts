@@ -2,6 +2,7 @@ import { Body, Controller, Param, ParseIntPipe, Post } from "@nestjs/common";
 import { ApiBody, ApiOkResponse, ApiParam, ApiTags } from "@nestjs/swagger";
 import { IsOptional, IsString } from "class-validator";
 import { RunService } from "./run.service";
+import { NodeAuth } from "../../../auth/node-auth.decorator";
 
 export class RunFailureDTO {
     @IsOptional()
@@ -16,6 +17,7 @@ export class RunController {
 
     // endpoint through which a node reports that a dispatched run failed
     @Post(":id/failure")
+    @NodeAuth()
     @ApiParam({ name: "id", type: Number, description: "The run ticket (runId) returned by GET /sim-config/next", example: 1 })
     @ApiBody({ type: RunFailureDTO, examples: { example1: { value: { error: "Simulation horizon is not a whole number of ticks" } } } })
     @ApiOkResponse({ description: "The run id, the number of failed runs of its simConfig, and whether the simConfig failed" })
