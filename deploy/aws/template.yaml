@@ -17,6 +17,19 @@ Parameters:
   UbuntuAmi:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
     Default: /aws/service/canonical/ubuntu/server/24.04/stable/current/arm64/hvm/ebs-gp3/ami-id
+  InstanceConnectPrefixList:
+    Type: String
+    Default: pl-067eefa539e593d55
+    Description: >-
+      Managed prefix list com.amazonaws.<region>.ec2-instance-connect (this default is eu-west-2's), allowed to
+      reach SSH so that EC2 Instance Connect works from the console
+  SshCidr:
+    Type: String
+    Default: ""
+    Description: Optional address range (e.g. your public IP as a.b.c.d/32) allowed to SSH to the main instance
+
+Conditions:
+  HasSshCidr: !Not [!Equals [!Ref SshCidr, ""]]
 
 Resources:
   # ------------------------------------------------------------------ network
@@ -75,11 +88,26 @@ Resources:
   MainSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Arion main instance (HTTP from the nodes only; Tailscale needs no inbound rule)
+      GroupDescription: Arion main instance (HTTP from the nodes, SSH from EC2 Instance Connect; Tailscale needs no inbound rule)
       VpcId: !Ref Vpc
       SecurityGroupIngress:
         - { IpProtocol: tcp, FromPort: 80, ToPort: 80, SourceSecurityGroupId: !Ref NodeSecurityGroup }
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          SourcePrefixListId: !Ref InstanceConnectPrefixList
+          Description: SSH from EC2 Instance Connect (console)
       Tags: [{ Key: Name, Value: arion-main }]
+  MainSshFromCidr:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: HasSshCidr
+    Properties:
+      GroupId: !Ref MainSecurityGroup
+      IpProtocol: tcp
+      FromPort: 22
+      ToPort: 22
+      CidrIp: !Ref SshCidr
+      Description: SSH from the operator's address
 
   # ------------------------------------------------------------------ storage
   BackupBucket:
@@ -218,6 +246,8 @@ Outputs:
     Value: !Ref MainInstance
   MainPrivateIp:
     Value: !GetAtt MainInstance.PrivateIp
+  MainPublicIp:
+    Value: !GetAtt MainInstance.PublicIp
   BackupBucket:
     Value: !Ref BackupBucket
   NodeGroup:
