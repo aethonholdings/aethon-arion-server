@@ -1,0 +1,224 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Arion (home-scale): one main instance (MySQL, server, analyst behind nginx, Tailscale) and a Spot node fleet
+  (Auto Scaling Group, desired 0 when idle). No inbound internet access; nodes reach the server inside the VPC.
+
+Parameters:
+  Branch:
+    Type: String
+    Default: claude/aethon-arion-analysis-sr1ra4
+    Description: Git branch of the aethon-arion repositories to deploy
+  MainInstanceType:
+    Type: String
+    Default: t4g.medium
+  NodeMaxInstances:
+    Type: Number
+    Default: 8
+  UbuntuAmi:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/canonical/ubuntu/server/24.04/stable/current/arm64/hvm/ebs-gp3/ami-id
+
+Resources:
+  # ------------------------------------------------------------------ network
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.40.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags: [{ Key: Name, Value: arion }]
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags: [{ Key: Name, Value: arion }]
+  GatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties: { VpcId: !Ref Vpc, InternetGatewayId: !Ref InternetGateway }
+  SubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: 10.40.0.0/20
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      MapPublicIpOnLaunch: true
+      Tags: [{ Key: Name, Value: arion-a }]
+  SubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: 10.40.16.0/20
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      MapPublicIpOnLaunch: true
+      Tags: [{ Key: Name, Value: arion-b }]
+  RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags: [{ Key: Name, Value: arion }]
+  DefaultRoute:
+    Type: AWS::EC2::Route
+    DependsOn: GatewayAttachment
+    Properties: { RouteTableId: !Ref RouteTable, DestinationCidrBlock: 0.0.0.0/0, GatewayId: !Ref InternetGateway }
+  SubnetARoutes:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties: { SubnetId: !Ref SubnetA, RouteTableId: !Ref RouteTable }
+  SubnetBRoutes:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties: { SubnetId: !Ref SubnetB, RouteTableId: !Ref RouteTable }
+
+  NodeSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Arion nodes (no inbound)
+      VpcId: !Ref Vpc
+      Tags: [{ Key: Name, Value: arion-node }]
+  MainSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Arion main instance (HTTP from the nodes only; Tailscale needs no inbound rule)
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        - { IpProtocol: tcp, FromPort: 80, ToPort: 80, SourceSecurityGroupId: !Ref NodeSecurityGroup }
+      Tags: [{ Key: Name, Value: arion-main }]
+
+  # ------------------------------------------------------------------ storage
+  BackupBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        { BlockPublicAcls: true, BlockPublicPolicy: true, IgnorePublicAcls: true, RestrictPublicBuckets: true }
+      BucketEncryption:
+        ServerSideEncryptionConfiguration: [{ ServerSideEncryptionByDefault: { SSEAlgorithm: AES256 } }]
+      LifecycleConfiguration:
+        Rules: [{ Id: expire-backups, Status: Enabled, ExpirationInDays: 30 }]
+
+  # ------------------------------------------------------------------ permissions
+  MainRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement: [{ Effect: Allow, Principal: { Service: ec2.amazonaws.com }, Action: sts:AssumeRole }]
+      ManagedPolicyArns: [arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore]
+      Policies:
+        - PolicyName: arion-main
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: [ssm:GetParameter, ssm:PutParameter]
+                Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/arion/*
+              - Effect: Allow
+                Action: [kms:Encrypt, kms:Decrypt]
+                Resource: "*"
+                Condition: { StringEquals: { "kms:ViaService": !Sub "ssm.${AWS::Region}.amazonaws.com" } }
+              - Effect: Allow
+                Action: s3:PutObject
+                Resource: !Sub ${BackupBucket.Arn}/*
+  MainInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties: { Roles: [!Ref MainRole] }
+  NodeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement: [{ Effect: Allow, Principal: { Service: ec2.amazonaws.com }, Action: sts:AssumeRole }]
+      ManagedPolicyArns: [arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore]
+      Policies:
+        - PolicyName: arion-node
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: ssm:GetParameter
+                Resource:
+                  - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/arion/node-key
+                  - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/arion/server-url
+              - Effect: Allow
+                Action: kms:Decrypt
+                Resource: "*"
+                Condition: { StringEquals: { "kms:ViaService": !Sub "ssm.${AWS::Region}.amazonaws.com" } }
+  NodeInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties: { Roles: [!Ref NodeRole] }
+
+  # ------------------------------------------------------------------ main instance
+  MainInstance:
+    Type: AWS::EC2::Instance
+    DependsOn: DefaultRoute
+    Properties:
+      ImageId: !Ref UbuntuAmi
+      InstanceType: !Ref MainInstanceType
+      SubnetId: !Ref SubnetA
+      SecurityGroupIds: [!Ref MainSecurityGroup]
+      IamInstanceProfile: !Ref MainInstanceProfile
+      MetadataOptions: { HttpTokens: required }
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs: { VolumeSize: 20, VolumeType: gp3, Encrypted: true, DeleteOnTermination: true }
+      Tags: [{ Key: Name, Value: arion-main }]
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          export ARION_REGION=${AWS::Region} ARION_BRANCH=${Branch} ARION_BACKUP_BUCKET=${BackupBucket}
+          apt-get update -q && apt-get install -y -q git
+          git clone -q --depth 1 --branch "$ARION_BRANCH" https://github.com/aethonholdings/aethon-arion-server.git /opt/arion-deploy
+          bash /opt/arion-deploy/deploy/aws/main-setup.sh
+
+  # ------------------------------------------------------------------ node fleet (Spot, 0 when idle)
+  NodeLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateData:
+        ImageId: !Ref UbuntuAmi
+        IamInstanceProfile: { Arn: !GetAtt NodeInstanceProfile.Arn }
+        SecurityGroupIds: [!Ref NodeSecurityGroup]
+        MetadataOptions: { HttpTokens: required }
+        BlockDeviceMappings:
+          - DeviceName: /dev/sda1
+            Ebs: { VolumeSize: 12, VolumeType: gp3, Encrypted: true, DeleteOnTermination: true }
+        TagSpecifications:
+          - ResourceType: instance
+            Tags: [{ Key: Name, Value: arion-node }]
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            export ARION_REGION=${AWS::Region} ARION_BRANCH=${Branch}
+            apt-get update -q && apt-get install -y -q git
+            git clone -q --depth 1 --branch "$ARION_BRANCH" https://github.com/aethonholdings/aethon-arion-server.git /opt/arion-deploy
+            bash /opt/arion-deploy/deploy/aws/node-setup.sh
+  NodeGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    DependsOn: DefaultRoute
+    Properties:
+      AutoScalingGroupName: arion-nodes
+      MinSize: "0"
+      MaxSize: !Ref NodeMaxInstances
+      DesiredCapacity: "0"
+      VPCZoneIdentifier: [!Ref SubnetA, !Ref SubnetB]
+      MixedInstancesPolicy:
+        InstancesDistribution:
+          OnDemandBaseCapacity: 0
+          OnDemandPercentageAboveBaseCapacity: 0
+          SpotAllocationStrategy: price-capacity-optimized
+        LaunchTemplate:
+          LaunchTemplateSpecification:
+            LaunchTemplateId: !Ref NodeLaunchTemplate
+            Version: !GetAtt NodeLaunchTemplate.LatestVersionNumber
+          Overrides:
+            - InstanceType: c7g.xlarge
+            - InstanceType: c6g.xlarge
+            - InstanceType: m7g.xlarge
+            - InstanceType: m6g.xlarge
+      Tags: [{ Key: Name, Value: arion-node, PropagateAtLaunch: true }]
+
+Outputs:
+  MainInstanceId:
+    Value: !Ref MainInstance
+  MainPrivateIp:
+    Value: !GetAtt MainInstance.PrivateIp
+  BackupBucket:
+    Value: !Ref BackupBucket
+  NodeGroup:
+    Value: !Ref NodeGroup

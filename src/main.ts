@@ -1,4 +1,5 @@
 import { NestFactory } from "@nestjs/core";
+import { NestExpressApplication } from "@nestjs/platform-express";
 import { RootModule } from "./modules/root/root.module";
 import environment from "../env/environment";
 import * as bodyParser from "body-parser";
@@ -17,7 +18,11 @@ async function bootstrap() {
     // create the root module, disabling the built-in body parser so that the custom
     // body parser with a higher limit is used instead
     options.bodyParser = false;
-    const app = await NestFactory.create(RootModule, options);
+    const app = await NestFactory.create<NestExpressApplication>(RootModule, options);
+
+    // behind a local reverse proxy (nginx), take the client address from X-Forwarded-For, so that the login rate
+    // limit counts each client separately rather than every request as coming from the proxy
+    app.set("trust proxy", "loopback");
 
     // set global prefix for all routes
     app.setGlobalPrefix("arion");
