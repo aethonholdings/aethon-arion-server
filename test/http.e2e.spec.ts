@@ -116,4 +116,31 @@ describe("Node protocol over HTTP (e2e)", () => {
         const response = await request(app.getHttpServer()).get("/arion/sim-config/999999");
         expect(response.status).toBe(404);
     });
+
+    it("reports progress: throughput, active nodes and SimSet convergence", async () => {
+        // by now this suite has dispatched runs, recorded a result and a failure for the authorised node "http"
+        const response = await request(app.getHttpServer()).get("/arion/progress");
+        expect(response.status).toBe(200);
+        const progress = response.body.payload;
+        expect(progress.activity.windowMinutes).toBe(5);
+        expect(progress.activity.results).toBeGreaterThanOrEqual(1);
+        expect(progress.activity.failedRuns).toBeGreaterThanOrEqual(1);
+        expect(progress.activity.dispatchedRuns).toBeGreaterThanOrEqual(progress.activity.results + progress.activity.failedRuns);
+        expect(progress.activity.resultsPerMinute).toBeCloseTo(progress.activity.results / 5, 1);
+        expect(progress.activity.resultsLastHour).toBeGreaterThanOrEqual(progress.activity.results);
+        expect(progress.activity.activeInstances).toBeGreaterThanOrEqual(1);
+        const node = progress.nodes.find((n: any) => n.id === "http");
+        expect(node).toEqual(jasmineLike({ hostname: "test", active: true, revoked: false }));
+        expect(node.instances).toBeGreaterThanOrEqual(1);
+        expect(node.results).toBeGreaterThanOrEqual(1);
+        const simSet = progress.simSets.find((s: any) => s.description === "http");
+        expect(simSet.state).not.toBe("completed");
+        expect(simSet.steps).toBeGreaterThanOrEqual(1);
+        expect(simSet.simConfigs).toBeGreaterThan(0);
+        expect(simSet.results).toBeGreaterThanOrEqual(1);
+        expect(simSet.convergedSimConfigs + simSet.runningSimConfigs + simSet.failedSimConfigs).toBeLessThanOrEqual(simSet.simConfigs);
+        expect(new Date(simSet.lastResultAt).getTime()).toBeGreaterThan(Date.now() - 10 * 60000);
+    });
 });
+
+const jasmineLike = (fields: object) => expect.objectContaining(fields);

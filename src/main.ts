@@ -47,6 +47,7 @@ async function bootstrap() {
         .addTag("OpenAPI")
         .addTag("Auth")
         .addTag("Run")
+        .addTag("Progress")
         .addBearerAuth()
         .build();
     const document = SwaggerModule.createDocument(app, config);
