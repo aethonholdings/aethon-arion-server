@@ -113,7 +113,8 @@ export class ConvergenceTestService {
                                     .getRepository(ConvergenceTest)
                                     .findOneOrFail({
                                         where: { id: convergenceTestPartial.id },
-                                        relations: { optimiserStates: true }
+                                        relations: { optimiserStates: true },
+                                        loadEagerRelations: false
                                     });
                                 const alreadyLinked: boolean = (existingConvergenceTest.optimiserStates || []).some(
                                     (state) => state.id === optimiserState.id
@@ -293,7 +294,9 @@ export class ConvergenceTestService {
                     configuratorParams: true,
                     simConfigParams: true,
                     optimiserStates: true
-                }
+                },
+                // the optimiser states' eager convergence tests (all tests of each state) are not needed here
+                loadEagerRelations: false
             })
             .then((convergenceTest: ConvergenceTest) => {
                 // fetch the summary statistics across all simConfigs in the convergence test

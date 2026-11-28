@@ -74,7 +74,9 @@ export class OptimiserStateService {
                     .then(() => {
                         return tEntityManager.getRepository(OptimiserState).findOne({
                             where: { id: optimiserState.id },
-                            relations: { simSet: { simConfigParams: true }, convergenceTests: true }
+                            relations: { simSet: { simConfigParams: true }, convergenceTests: true },
+                            // eager relations would load the SimSet's whole optimiser history (see touch)
+                            loadEagerRelations: false
                         });
                     });
             })
@@ -115,13 +117,16 @@ export class OptimiserStateService {
                 where: {
                     id: optimiserStateId
                 },
+                // only what the optimiser update needs: the SimSet's eager relations would load every earlier
+                // optimiser state with its convergence tests and data, at a cost that grows with every step, on every
+                // dispatch and result post; and the convergence tests' sim configs are not needed (per-replicate
+                // results are attached by _attachReplicates)
                 relations: {
                     simSet: { simConfigParams: true },
-                    convergenceTests: {
-                        configuratorParams: true,
-                        simConfigs: true
-                    }
-                }
+                    convergenceTests: { configuratorParams: true, simConfigParams: true }
+                },
+                loadEagerRelations: false,
+                relationLoadStrategy: "query"
             })
             .then(async (optimiserState: OptimiserState) => {
                 model = this.modelService.getModel(optimiserState.modelName);
