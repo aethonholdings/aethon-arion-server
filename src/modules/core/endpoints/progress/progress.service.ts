@@ -1,7 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import { DataSource } from "typeorm";
 import { States } from "aethon-arion-pipeline";
-import { ProgressDTO, ProgressNodeDTO, ProgressSimSetDTO } from "./progress.dto";
+import { ProgressDTO, ProgressNodeDTO, ProgressProcessDTO, ProgressSimSetDTO } from "./progress.dto";
+import environment from "../../../../../env/environment";
+
+/** Seconds without a heartbeat after which a process counts as silent. */
+export const SILENT_AFTER_SECONDS = 30;
 
 /** Minutes over which node activity and throughput are measured. */
 export const ACTIVITY_WINDOW_MINUTES = 5;
@@ -12,12 +16,14 @@ const iso = (value: any): string | null => (value ? new Date(value).toISOString(
 /** A read-only snapshot of the work in progress: nodes, throughput and SimSet convergence, for monitoring. */
 @Injectable()
 export class ProgressService {
+    private _expectedVersion: string | null = environment().nodes?.expectedVersion ?? null;
+
     constructor(private dataSource: DataSource) {}
 
     async get(): Promise<ProgressDTO> {
         const w = ACTIVITY_WINDOW_MINUTES;
         const q = (sql: string, params: any[] = []) => this.dataSource.query(sql, params);
-        const [[activity], [hour], [inFlight], instances, nodes, simSets] = await Promise.all([
+        const [[activity], [hour], [inFlight], instances, nodes, simSets, processRows] = await Promise.all([
             q(
                 `SELECT SUM(dispatchedAt > NOW() - INTERVAL ? MINUTE) AS dispatched,
                         SUM(completedAt > NOW() - INTERVAL ? MINUTE) AS results,
@@ -51,8 +57,36 @@ export class ProgressService {
                     OR EXISTS (SELECT 1 FROM optimiser_state o WHERE o.simSetId = s.id AND o.end > NOW() - INTERVAL 1 DAY)
                  ORDER BY s.id DESC`,
                 [States.COMPLETED, States.FAILED]
+            ),
+            q(
+                `SELECT *, TIMESTAMPDIFF(SECOND, lastHeartbeatAt, NOW()) AS age FROM node_process
+                 WHERE lastHeartbeatAt > NOW() - INTERVAL 1 HOUR ORDER BY instance, id`
             )
         ]);
+        const processes: ProgressProcessDTO[] = processRows.map((p: any) => ({
+            id: p.id,
+            machineId: p.machineId,
+            instance: p.instance ?? null,
+            state: p.state,
+            runId: p.runId === null ? null : num(p.runId),
+            simConfigId: p.simConfigId === null ? null : num(p.simConfigId),
+            clockTick: p.clockTick === null ? null : num(p.clockTick),
+            totalClockTicks: p.totalClockTicks === null ? null : num(p.totalClockTicks),
+            runStartedAt: iso(p.runStartedAt),
+            completedRuns: num(p.completedRuns),
+            failedRuns: num(p.failedRuns),
+            averageRunMs: p.averageRunMs === null ? null : num(p.averageRunMs),
+            lastError: p.lastError ?? null,
+            memoryMb: p.memoryMb === null ? null : num(p.memoryMb),
+            version: p.version ?? null,
+            lastHeartbeatAt: iso(p.lastHeartbeatAt) as string,
+            silent: num(p.age) > SILENT_AFTER_SECONDS,
+            outdated: !!this._expectedVersion && !!p.version && p.version !== this._expectedVersion
+        }));
+        // average run time across processes, weighted by their completed runs
+        const timed = processes.filter((p) => p.averageRunMs !== null && p.completedRuns > 0);
+        const weight = timed.reduce((sum, p) => sum + p.completedRuns, 0);
+        const averageRunMs = weight > 0 ? Math.round(timed.reduce((sum, p) => sum + (p.averageRunMs as number) * p.completedRuns, 0) / weight) : null;
 
         const ids: number[] = simSets.map((s: any) => num(s.id));
         const counts: { [id: number]: any } = {};
@@ -97,9 +131,12 @@ export class ProgressService {
                 resultsPerMinute: Math.round((results / w) * 10) / 10,
                 resultsLastHour: num(hour?.n),
                 inFlightRuns: num(inFlight?.n),
-                activeInstances: instances.reduce((sum: number, row: any) => sum + num(row.instances), 0)
+                activeInstances: instances.reduce((sum: number, row: any) => sum + num(row.instances), 0),
+                averageRunMs
             },
             nodes: nodeRows,
+            processes,
+            expectedNodeVersion: this._expectedVersion,
             simSets: simSets.map(
                 (s: any): ProgressSimSetDTO => ({
                     id: num(s.id),

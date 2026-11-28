@@ -168,6 +168,12 @@ describe("Node protocol over HTTP (e2e)", () => {
         const repo = app.get(DataSource).getRepository(NodeProcess);
         let row = await repo.findOneByOrFail({ id: "http:i-0abc:1" });
         expect([row.machineId, row.instance, row.state, row.runId, row.clockTick, row.totalClockTicks, row.version]).toEqual(["http", "i-0abc", "simulating", 5, 40, 96, "abc1234"]);
+        // the Monitor's progress lists the process, heard from just now and running the expected code
+        const progress = (await request(app.getHttpServer()).get("/arion/progress")).body.payload;
+        const listed = progress.processes.find((p: any) => p.id === "http:i-0abc:1");
+        expect(listed).toEqual(jasmineLike({ machineId: "http", instance: "i-0abc", state: "simulating", runId: 5, clockTick: 40, totalClockTicks: 96, silent: false, outdated: false }));
+        expect(progress.activity.averageRunMs).toBe(1500);
+        expect(progress.expectedNodeVersion).toBeNull();
         // the next heartbeat replaces the row
         expect((await post(beat({ state: "idle", run: null, completedRuns: 4 }))).status).toBe(200);
         row = await repo.findOneByOrFail({ id: "http:i-0abc:1" });
@@ -176,6 +182,10 @@ describe("Node protocol over HTTP (e2e)", () => {
         expect((await post(beat(), null)).status).toBe(401);
         expect((await post(beat({ nodeId: "other:i-1:0" }))).status).toBe(403);
         expect((await post(beat({ state: "sleeping" }))).status).toBe(400);
+        // a process not heard from for over 30 s is silent
+        await repo.update({ id: "http:i-0abc:1" }, { lastHeartbeatAt: new Date(Date.now() - 60 * 1000) });
+        const later = (await request(app.getHttpServer()).get("/arion/progress")).body.payload;
+        expect(later.processes.find((p: any) => p.id === "http:i-0abc:1").silent).toBe(true);
         // processes not heard from for a day are removed
         await repo.update({ id: "http:i-0abc:1" }, { lastHeartbeatAt: new Date(Date.now() - 25 * 3600 * 1000) });
         expect(await app.get(NodeService).prune()).toBe(1);
