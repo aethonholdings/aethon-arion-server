@@ -5,11 +5,16 @@ Last updated 2026-11-28.
 
 ## Open
 
-| # | Item | Status |
-|---|---|---|
-| 1 | Redeploy arion-main with the latest code (Monitor page, progress endpoint, control experiments) | Pushed to the branch, not deployed |
-| 2 | An update command for arion-main (pull, build, restart) | Done: `deploy/aws/update.sh` |
-| 3 | `deploy/aws` README | Done |
+None.
+
+## Done
+
+| Item | Where |
+|---|---|
+| Redeploy arion-main with the latest code (Monitor page, progress endpoint, control experiments, fleet control) | Deployed 2026-11-28 |
+| An update command for arion-main | `deploy/aws/update.sh` |
+| `deploy/aws` README | `deploy/aws/README.md` |
+| Scale the node fleet from the analyst's Monitor page | `GET/PUT /arion/fleet`; Monitor page, Node fleet |
 
 ## Parked
 
