@@ -28,6 +28,9 @@ export type ServerEnvironment = {
         ttl: number;
     };
     options: ArionOptions;
+    nodes?: {
+        expectedVersion?: string; // the node code's git commit deployed with this server (set by deploy/aws/main-setup.sh)
+    };
     fleet?: {
         autoScalingGroup: string; // AWS Auto Scaling group of the node fleet, resized from the analyst's Monitor page
         region: string;

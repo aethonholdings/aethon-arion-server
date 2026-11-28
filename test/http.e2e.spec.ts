@@ -6,10 +6,11 @@ import { DataSource } from "typeorm";
 import { lastValueFrom } from "rxjs";
 import { C1 } from "aethon-arion-c1";
 import { DomainTypes, Logger, RandomStreamFactory } from "aethon-arion-pipeline";
-import { Result } from "aethon-arion-db";
+import { NodeProcess, Result } from "aethon-arion-db";
 import { RootModule } from "../src/modules/root/root.module";
 import { SimSetService } from "../src/modules/core/endpoints/sim-set/sim-set.service";
 import { AuthService } from "../src/modules/auth/auth.service";
+import { NodeService } from "../src/modules/core/endpoints/node/node.service";
 import { DefaultExceptionFilter } from "../src/common/filters/default-exception/default-exception.filter";
 import { APIRequestInterceptor } from "../src/common/interceptors/api-request/api-request.interceptor";
 
@@ -149,6 +150,36 @@ describe("Node protocol over HTTP (e2e)", () => {
         expect((await request(app.getHttpServer()).post("/arion/fleet/scale").send({ desired: 2 })).status).toBe(404);
         expect((await request(app.getHttpServer()).post("/arion/fleet/scale").send({ desired: -1 })).status).toBe(400);
         expect((await request(app.getHttpServer()).put("/arion/fleet").send({ desired: 2 })).status).toBe(404);
+    });
+
+    it("records node process heartbeats under the authorised machine and prunes silent processes", async () => {
+        const post = (body: any, auth: string | null = bearer) => {
+            const r = request(app.getHttpServer()).post("/arion/node/heartbeat");
+            return (auth ? r.set("Authorization", auth) : r).send(body);
+        };
+        const beat = (overrides: any = {}) => ({
+            nodeId: "http:i-0abc:1", state: "simulating", completedRuns: 3, failedRuns: 1, averageRunMs: 1500, memoryMb: 120,
+            version: "abc1234", startedAt: "2026-11-28T10:00:00.000Z",
+            run: { runId: 5, simConfigId: 2, clockTick: 40, totalClockTicks: 96, startedAt: "2026-11-28T10:05:00.000Z" }, ...overrides
+        });
+        const first = await post(beat());
+        expect(first.status).toBe(200);
+        expect(first.body.payload).toEqual({ commands: [], expectedVersion: null });
+        const repo = app.get(DataSource).getRepository(NodeProcess);
+        let row = await repo.findOneByOrFail({ id: "http:i-0abc:1" });
+        expect([row.machineId, row.instance, row.state, row.runId, row.clockTick, row.totalClockTicks, row.version]).toEqual(["http", "i-0abc", "simulating", 5, 40, 96, "abc1234"]);
+        // the next heartbeat replaces the row
+        expect((await post(beat({ state: "idle", run: null, completedRuns: 4 }))).status).toBe(200);
+        row = await repo.findOneByOrFail({ id: "http:i-0abc:1" });
+        expect([row.state, row.runId, row.completedRuns]).toEqual(["idle", null, 4]);
+        // refused: no key, another machine's id, an unknown state
+        expect((await post(beat(), null)).status).toBe(401);
+        expect((await post(beat({ nodeId: "other:i-1:0" }))).status).toBe(403);
+        expect((await post(beat({ state: "sleeping" }))).status).toBe(400);
+        // processes not heard from for a day are removed
+        await repo.update({ id: "http:i-0abc:1" }, { lastHeartbeatAt: new Date(Date.now() - 25 * 3600 * 1000) });
+        expect(await app.get(NodeService).prune()).toBe(1);
+        expect(await repo.findOneBy({ id: "http:i-0abc:1" })).toBeNull();
     });
 });
 

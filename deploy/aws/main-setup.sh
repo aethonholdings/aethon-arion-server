@@ -52,6 +52,9 @@ for r in $REPOS; do
 done
 status "code-cloned"
 
+# the node code deployed with this server: processes running other code are flagged on the Monitor page
+NODE_VERSION="$(git -C "$ROOT/aethon-arion-node" rev-parse --short HEAD)"
+
 # ---------------------------------------------------------------- database
 DB_PASSWORD="$(param /arion/db-password)"
 if [ -z "$DB_PASSWORD" ]; then DB_PASSWORD="$(openssl rand -base64 24 | tr -d '/+=')"; put_secret /arion/db-password "$DB_PASSWORD"; fi
@@ -101,7 +104,8 @@ export default () =>
             models: [C1 as unknown as Model]
         },
         auth: { nodes: "required", loginAttemptsPerMinute: 5 },
-        fleet: { autoScalingGroup: "${NODE_GROUP}", region: "${REGION}" }
+        fleet: { autoScalingGroup: "${NODE_GROUP}", region: "${REGION}" },
+        nodes: { expectedVersion: "${NODE_VERSION}" }
     }) as ServerEnvironment;
 TS
 (cd "$ROOT/aethon-arion-server" && bash ci/link-siblings.sh core pipeline c1 db && npm run build)

@@ -5,6 +5,7 @@ import {
     ConvergenceTest,
     OptimiserState,
     Run,
+    NodeProcess,
     OrgConfig,
     Result,
     SimConfig,
@@ -26,7 +27,8 @@ import { DatabaseService } from "./services/database.service";
             Result,
             StateSpacePoint,
             OptimiserState,
-            Run
+            Run,
+            NodeProcess
         ])
     ],
     providers: [DatabaseService],
