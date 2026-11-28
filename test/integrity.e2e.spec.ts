@@ -273,4 +273,67 @@ describe("Dispatch and result integrity (e2e)", () => {
             simSetService.create({ modelName: "C1", description: "bad", optimiserParams: params } as any)
         ).rejects.toThrow(/Invalid optimiser parameters/);
     });
+
+    it("runs a control experiment: paired control and test groups of the required size, then completes", async () => {
+        await dataSource.query("DELETE FROM sim_set");
+        const config = { spans: 2, layers: 2, matrixInit: { influence: "random", judgment: "random", incentive: "purposeful" } };
+        const run = async (orgConfigs: number, description: string) => {
+            const simSet = await simSetService.create({
+                modelName: "C1",
+                description,
+                optimiserName: "C1ControlExperimentOptimiser",
+                simConfigParams: { days: 2, randomStreamType: "random" },
+                optimiserParams: { config, orgConfigs }
+            } as any);
+            for (let i = 0; i < 5000; i++) {
+                const job = await simConfigService.next("experiment");
+                if (!job) break;
+                await resultService.create(await simulate(job));
+            }
+            const done = await dataSource.getRepository(SimSet).findOneByOrFail({ id: simSet.id });
+            const [state] = await dataSource.query("SELECT id, status, converged, optimiserData FROM optimiser_state WHERE simSetId = ?", [simSet.id]);
+            return { done, state, data: typeof state.optimiserData === "string" ? JSON.parse(state.optimiserData) : state.optimiserData };
+        };
+
+        const first = await run(6, "experiment 6");
+        expect(first.done.state).toBe(States.COMPLETED);
+        expect(first.state.status).toBe(States.COMPLETED);
+        expect(Number(first.state.converged)).toBe(1);
+        expect(first.data.dataPoints.map((p: any) => [p.id, p.data.inputs.data.board.controlStep])).toEqual([["control", false], ["test", true]]);
+        const result = first.data.result;
+        expect(result.pairs).toBe(6); // the CI environment's minimum is 3: the experiment's requirement applies
+        expect(result.testBetter + result.controlBetter + result.ties).toBe(6);
+        expect(result.ci95[0]).toBeLessThanOrEqual(result.delta);
+        expect(result.ci95[1]).toBeGreaterThanOrEqual(result.delta);
+        // replicate k of both groups is the same organisation
+        const tensors = await dataSource.query(
+            `SELECT oc.replicate, cp.hash, oc.agentSet FROM org_config oc JOIN configurator_params cp ON cp.id = oc.configuratorParamsId
+             WHERE cp.hash IN (?, ?) ORDER BY oc.replicate`,
+            first.data.dataPoints.map((p: any) => p.data.inputs.hash)
+        );
+        const byReplicate = new Map<number, string[]>();
+        for (const row of tensors) byReplicate.set(row.replicate, [...(byReplicate.get(row.replicate) ?? []), JSON.stringify(row.agentSet)]);
+        expect(byReplicate.size).toBe(6);
+        for (const [, sets] of byReplicate) {
+            expect(sets.length).toBe(2);
+            expect(sets[0]).toBe(sets[1]);
+        }
+
+        // a larger experiment on the same settings reuses the 6 replicates and adds 4 to each group
+        const second = await run(10, "experiment 10");
+        expect(second.done.state).toBe(States.COMPLETED);
+        expect(second.data.result.pairs).toBe(10);
+        const counts = await dataSource.query(
+            `SELECT ct.requiredOrgConfigs, COUNT(DISTINCT sc.orgConfigId) AS n FROM convergence_test ct JOIN sim_config sc ON sc.convergenceTestId = ct.id
+             JOIN configurator_params cp ON cp.id = ct.configuratorParamsId WHERE cp.hash IN (?, ?) GROUP BY ct.id`,
+            first.data.dataPoints.map((p: any) => p.data.inputs.hash)
+        );
+        expect(counts.map((c: any) => [Number(c.requiredOrgConfigs), Number(c.n)])).toEqual([[10, 10], [10, 10]]);
+    });
+
+    it("rejects control experiment parameters out of range", async () => {
+        await expect(
+            simSetService.create({ modelName: "C1", description: "bad", optimiserName: "C1ControlExperimentOptimiser", optimiserParams: { config: {}, orgConfigs: 1 } } as any)
+        ).rejects.toThrow(/orgConfigs/);
+    });
 });

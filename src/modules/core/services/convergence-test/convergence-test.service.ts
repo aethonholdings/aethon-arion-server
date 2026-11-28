@@ -44,7 +44,8 @@ export class ConvergenceTestService {
         requiredConfiguratorParamsDTOs: ConfiguratorParamsDTO<ConfiguratorParamData>[],
         simConfigParamsDTO: SimConfigParamsDTO,
         optimiserState: OptimiserStateDTO<ConfiguratorParamData>,
-        tEntityManager?: EntityManager
+        tEntityManager?: EntityManager,
+        requiredOrgConfigs?: number
     ): Promise<ConvergenceTest[]> {
         if (!tEntityManager) tEntityManager = this.dataSource.createEntityManager();
         // de-duplicate by hash: two optimiser data points can map to the same configuratorParams (e.g. a
@@ -128,6 +129,15 @@ export class ConvergenceTestService {
                                     await this.reopen(existingConvergenceTest.id, tEntityManager);
                                     existingConvergenceTest.state = States.RUNNING;
                                 }
+                                // an optimiser that needs more org configs than the test has: raise its requirement
+                                // and add the missing replicates (k + 1 ... required, so pairing with other tests holds)
+                                if (
+                                    requiredOrgConfigs &&
+                                    requiredConfiguratorParamsDTO.multipleOrgConfigs &&
+                                    requiredOrgConfigs > (existingConvergenceTest.requiredOrgConfigs ?? 0)
+                                ) {
+                                    await this._requireOrgConfigs(existingConvergenceTest, requiredOrgConfigs, simConfigParamsDTO, tEntityManager);
+                                }
                                 return existingConvergenceTest;
                             } else {
                                 // create a new convergence test
@@ -144,13 +154,14 @@ export class ConvergenceTestService {
                                         resultCount: 0,
                                         dispatchedRuns: 0,
                                         converged: false,
+                                        requiredOrgConfigs: requiredOrgConfigs ?? null,
                                         optimiserStates: [optimiserState]
                                     });
 
                                 if (this._dev) this._logger.log(`ConvergenceTest ${convergenceTest.id} created`);
                                 // check the required orgConfigCount based on the requiredConfiguratorParamsDTO.multipleOrgConfigs
                                 let orgConfigCountMin = requiredConfiguratorParamsDTO.multipleOrgConfigs
-                                    ? this._env.options.minOrgConfigs
+                                    ? Math.max(this._env.options.minOrgConfigs, requiredOrgConfigs ?? 0)
                                     : 1;
 
                                 if (this._dev)
@@ -193,6 +204,47 @@ export class ConvergenceTestService {
                 if (this._dev) this._logger.log(`Convergence tests created`);
                 return convergenceTests;
             });
+    }
+
+    /**
+     * Raises a convergence test's required org config count and generates the missing replicates (the next replicate
+     * numbers, so that they pair with the same replicates of other tests). A converged test is reopened: it is
+     * dispatched again until the new replicates are done.
+     */
+    private async _requireOrgConfigs(
+        convergenceTest: ConvergenceTest,
+        required: number,
+        simConfigParamsDTO: SimConfigParamsDTO,
+        tEntityManager: EntityManager
+    ): Promise<void> {
+        const full: ConvergenceTest = await tEntityManager.getRepository(ConvergenceTest).findOneOrFail({
+            where: { id: convergenceTest.id },
+            relations: { configuratorParams: true, simConfigParams: true }
+        });
+        const existing: number = await tEntityManager
+            .getRepository(OrgConfig)
+            .createQueryBuilder("orgConfig")
+            .innerJoin(SimConfig, "simConfig", "simConfig.orgConfigId = orgConfig.id")
+            .where("simConfig.convergenceTestId = :id", { id: full.id })
+            .select("MAX(orgConfig.replicate)", "max")
+            .getRawOne()
+            .then((row: any) => Number(row?.max ?? 0));
+        const baseSeed: number = await this.orgConfigService.baseSeed(simConfigParamsDTO.id, tEntityManager);
+        for (let replicate = existing + 1; replicate <= required; replicate++) {
+            const orgConfig: OrgConfig = await this.orgConfigService.create(full.configuratorParams, tEntityManager, replicate, baseSeed);
+            await this.simConfigService.create(full.simConfigParams, orgConfig, full, tEntityManager);
+        }
+        const added: number = Math.max(0, required - existing);
+        await tEntityManager.getRepository(ConvergenceTest).update(full.id, {
+            requiredOrgConfigs: required,
+            ...(added > 0 ? { converged: false, state: States.RUNNING, orgConfigCount: existing + added } : {})
+        });
+        convergenceTest.requiredOrgConfigs = required;
+        if (added > 0) {
+            convergenceTest.converged = false;
+            convergenceTest.state = States.RUNNING;
+            this._logger.log(`ConvergenceTest ${full.id} requires ${required} org configs: ${added} added`);
+        }
     }
 
     /**
@@ -296,11 +348,17 @@ export class ConvergenceTestService {
                             } else {
                                 // standard-error rule over the org config means: the sample of org configs is large
                                 // enough once the standard error of the mean performance is within tolerance
+                                // a test with a required org config count runs at least that many
+                                const required: number = convergenceTest.requiredOrgConfigs ?? 0;
                                 const decision = standardErrorConvergence(
                                     simConfigSet.orgConfigCount,
                                     simConfigSet.avgPerformance,
                                     simConfigSet.stdDevPerformance,
-                                    this._criteria
+                                    {
+                                        ...this._criteria,
+                                        minSamples: Math.max(this._criteria.minSamples, required),
+                                        maxSamples: Math.max(this._criteria.maxSamples, required)
+                                    }
                                 );
                                 converged = decision.converged;
                                 if (decision.capped)

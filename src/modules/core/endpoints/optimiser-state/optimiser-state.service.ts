@@ -85,7 +85,8 @@ export class OptimiserStateService {
                     optimiser.getStateRequiredConfiguratorParams(optimiserState),
                     optimiserState.simSet.simConfigParams || simSetDTO.simConfigParams,
                     optimiserState,
-                    tEntityManager
+                    tEntityManager,
+                    optimiser.requiredOrgConfigs(simSetDTO.optimiserParams ?? optimiserState.simSet.optimiserParams)
                 );
                 return this.touch(optimiserState.id, tEntityManager);
             });
