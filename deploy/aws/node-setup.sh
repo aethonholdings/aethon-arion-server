@@ -37,6 +37,10 @@ for i in $(seq 1 120); do
 done
 [ -n "$KEY" ] && [ -n "$URL" ] || { echo "no fleet key or server address in Parameter Store"; exit 1; }
 
+# this instance's id: part of every node process's id, so that the Monitor shows which instance a process runs on
+TOKEN="$(curl -s -X PUT http://169.254.169.254/latest/api/token -H 'X-aws-ec2-metadata-token-ttl-seconds: 300')"
+INSTANCE_ID="$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id)"
+
 cat > "$ROOT/aethon-arion-node/config/arion.config.node.json" <<JSON
 { "id": "aws-fleet", "host": "unused", "basePath": "arion", "loopInterval": 2000, "verbose": false, "saveStateSpace": false }
 JSON
@@ -46,7 +50,7 @@ module.exports = { apps: [{
     script: "$ROOT/aethon-arion-node/dist/src/main.js",
     instances: "max",
     exec_mode: "fork",
-    env: { ARION_SERVER_URL: "$URL", ARION_NODE_KEY: "$KEY" },
+    env: { ARION_SERVER_URL: "$URL", ARION_NODE_KEY: "$KEY", ARION_NODE_INSTANCE: "$INSTANCE_ID" },
     max_restarts: 50,
     restart_delay: 10000
 }] };
@@ -59,8 +63,6 @@ sudo -u arion -H pm2 save
 env PATH="$PATH" pm2 startup systemd -u arion --hp /home/arion
 
 # mark the instance ready, so that the analyst's Monitor page shows it as running rather than building
-TOKEN="$(curl -s -X PUT http://169.254.169.254/latest/api/token -H 'X-aws-ec2-metadata-token-ttl-seconds: 60')"
-INSTANCE_ID="$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id)"
 aws ec2 create-tags --region "$REGION" --resources "$INSTANCE_ID" --tags Key=arion:node-ready,Value=true ||
     echo "could not tag the instance ready (the Monitor page will show it as building)"
 echo "=== Arion node setup complete $(date -Is): $(nproc) node processes"
