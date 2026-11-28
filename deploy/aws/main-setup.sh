@@ -41,6 +41,8 @@ command -v tailscale >/dev/null || curl -fsSL https://tailscale.com/install.sh |
 status "packages-installed"
 
 # ---------------------------------------------------------------- code
+# the checkouts belong to the arion user and this script runs as root: let git work in them on a re-run
+git config --global --get-all safe.directory | grep -qx '\*' || git config --global --add safe.directory '*'
 id arion >/dev/null 2>&1 || useradd --system --create-home --shell /usr/sbin/nologin arion
 mkdir -p "$ROOT"
 for r in $REPOS; do
