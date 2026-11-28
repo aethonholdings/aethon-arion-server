@@ -57,4 +57,10 @@ chown -R arion:arion "$ROOT"
 sudo -u arion -H pm2 start "$ROOT/ecosystem.config.js"
 sudo -u arion -H pm2 save
 env PATH="$PATH" pm2 startup systemd -u arion --hp /home/arion
+
+# mark the instance ready, so that the analyst's Monitor page shows it as running rather than building
+TOKEN="$(curl -s -X PUT http://169.254.169.254/latest/api/token -H 'X-aws-ec2-metadata-token-ttl-seconds: 60')"
+INSTANCE_ID="$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id)"
+aws ec2 create-tags --region "$REGION" --resources "$INSTANCE_ID" --tags Key=arion:node-ready,Value=true ||
+    echo "could not tag the instance ready (the Monitor page will show it as building)"
 echo "=== Arion node setup complete $(date -Is): $(nproc) node processes"

@@ -158,7 +158,10 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_read_timeout 300s;
     }
-    location / { try_files $uri $uri/ /index.html; }
+    # the page itself is never cached, so browsers load the new build after an update (its scripts have hashed names)
+    location = /index.html { add_header Cache-Control "no-cache"; }
+    location / { try_files $uri $uri/ /index.html; add_header Cache-Control "no-cache"; }
+    location ~* \.(js|css|woff2?|ico|png|svg)$ { expires 30d; }
 }
 NGINX
 ln -sf /etc/nginx/sites-available/arion /etc/nginx/sites-enabled/arion

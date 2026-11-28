@@ -141,6 +141,15 @@ describe("Node protocol over HTTP (e2e)", () => {
         expect(simSet.convergedSimConfigs + simSet.runningSimConfigs + simSet.failedSimConfigs).toBeLessThanOrEqual(simSet.simConfigs);
         expect(new Date(simSet.lastResultAt).getTime()).toBeGreaterThan(Date.now() - 10 * 60000);
     });
+
+    it("reports no fleet when the server manages none, and resizes only through POST /fleet/scale", async () => {
+        const fleet = await request(app.getHttpServer()).get("/arion/fleet");
+        expect(fleet.status).toBe(200);
+        expect(fleet.body.payload).toEqual({ enabled: false });
+        expect((await request(app.getHttpServer()).post("/arion/fleet/scale").send({ desired: 2 })).status).toBe(404);
+        expect((await request(app.getHttpServer()).post("/arion/fleet/scale").send({ desired: -1 })).status).toBe(400);
+        expect((await request(app.getHttpServer()).put("/arion/fleet").send({ desired: 2 })).status).toBe(404);
+    });
 });
 
 const jasmineLike = (fields: object) => expect.objectContaining(fields);

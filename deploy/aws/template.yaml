@@ -145,7 +145,7 @@ Resources:
                 Resource: !Sub ${BackupBucket.Arn}/*
               # the analyst's Monitor page sets the node fleet's size through the server
               - Effect: Allow
-                Action: autoscaling:DescribeAutoScalingGroups
+                Action: [autoscaling:DescribeAutoScalingGroups, autoscaling:DescribeScalingActivities, ec2:DescribeInstances]
                 Resource: "*"
               - Effect: Allow
                 Action: [autoscaling:UpdateAutoScalingGroup, autoscaling:SetDesiredCapacity]
@@ -170,6 +170,11 @@ Resources:
                 Resource:
                   - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/arion/node-key
                   - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/arion/server-url
+              # a node marks its own instance ready once its processes run (shown on the Monitor page)
+              - Effect: Allow
+                Action: ec2:CreateTags
+                Resource: !Sub arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*
+                Condition: { StringEquals: { "ec2:ResourceTag/Name": arion-node }, "ForAllValues:StringEquals": { "aws:TagKeys": ["arion:node-ready"] } }
               - Effect: Allow
                 Action: kms:Decrypt
                 Resource: "*"

@@ -33,6 +33,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-auto-scaling": "^3.1179.0",
+    "@aws-sdk/client-ec2": "^3.1179.0",
     "@nestjs/common": "^10.3.10",
     "@nestjs/config": "^3.2.3",
     "@nestjs/core": "^10.3.10",
