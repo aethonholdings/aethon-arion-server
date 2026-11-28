@@ -78,25 +78,23 @@ every 25 s.
 ### Order
 
 Phase 1 first (1.1 is the foundation), then phase 2, then 3.2 on its own (small, cost guard), then the rest of
-phase 3 and phase 4. Parked items 6 (prebuilt image) and 7 (scaling on outstanding work) are covered by 4.3, 3.2
-and 3.3.
+phase 3 and phase 4. The plan absorbs two formerly parked items: the prebuilt node image (4.3) and scaling on
+outstanding work (3.2, 3.3).
 
 ## Parked
 
 | # | Item |
 |---|---|
-| 4 | Merge `claude/aethon-arion-analysis-sr1ra4` into `main` in all 7 repos |
-| 5 | Lock `db:reset` in production |
-| 6 | Prebuilt machine image for nodes (now planned: step 4.3) |
-| 7 | Scale nodes automatically on the number of outstanding runs (now planned: steps 3.2, 3.3) |
-| 8 | SSH from your laptop (`SshCidr`) or Tailscale SSH |
-| 9 | Stop arion-main when idle |
-| 10 | In-app login for the analyst |
-| 11 | Analyst lint: 43 old findings |
-| 12 | Home setup on the Mac minis |
-| 13 | Stopping rule based on the precision of differences, with the optimiser requesting more data |
+| 1 | Merge `claude/aethon-arion-analysis-sr1ra4` into `main` in all 7 repos |
+| 2 | Lock `db:reset` in production |
+| 3 | SSH from your laptop (`SshCidr`) or Tailscale SSH |
+| 4 | Stop arion-main when idle |
+| 5 | In-app login for the analyst |
+| 6 | Analyst lint: 43 old findings |
+| 7 | Home setup on the Mac minis |
+| 8 | Stopping rule based on the precision of differences, with the optimiser requesting more data |
 
-### Notes on parked item 13
+### Notes on parked item 8
 
 Convergence tests stop when each design's own mean is known to within a percentage of itself (`orgConfigConvergenceMargin`).
 With performance around 38,000 and run-to-run spread around 3.6, that is met at `minOrgConfigs`, so the optimiser compares
