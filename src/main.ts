@@ -48,6 +48,7 @@ async function bootstrap() {
         .addTag("Auth")
         .addTag("Run")
         .addTag("Progress")
+        .addTag("Fleet")
         .addBearerAuth()
         .build();
     const document = SwaggerModule.createDocument(app, config);

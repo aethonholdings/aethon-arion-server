@@ -143,6 +143,13 @@ Resources:
               - Effect: Allow
                 Action: s3:PutObject
                 Resource: !Sub ${BackupBucket.Arn}/*
+              # the analyst's Monitor page sets the node fleet's size through the server
+              - Effect: Allow
+                Action: autoscaling:DescribeAutoScalingGroups
+                Resource: "*"
+              - Effect: Allow
+                Action: [autoscaling:UpdateAutoScalingGroup, autoscaling:SetDesiredCapacity]
+                Resource: !Sub arn:aws:autoscaling:${AWS::Region}:${AWS::AccountId}:autoScalingGroup:*:autoScalingGroupName/arion-nodes
   MainInstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties: { Roles: [!Ref MainRole] }

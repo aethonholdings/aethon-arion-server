@@ -20,6 +20,8 @@ import { RunService } from "./endpoints/run/run.service";
 import { AuthModule } from "../auth/auth.module";
 import { ProgressController } from "./endpoints/progress/progress.controller";
 import { ProgressService } from "./endpoints/progress/progress.service";
+import { FleetController } from "./endpoints/fleet/fleet.controller";
+import { FleetService } from "./endpoints/fleet/fleet.service";
 
 @Module({
     imports: [AuthModule],
@@ -32,14 +34,16 @@ import { ProgressService } from "./endpoints/progress/progress.service";
         SeedsController,
         OptimiserStateController,
         RunController,
-        ProgressController
+        ProgressController,
+        FleetController
     ],
     providers: [SimConfigService, ResultService, OrgConfigService, SimSetService, StateSpaceService, SeedsService,
         ModelService,
         OptimiserStateService,
         ConvergenceTestService,
         RunService,
-        ProgressService
+        ProgressService,
+        FleetService
     ]
 })
 export class CoreModule {}

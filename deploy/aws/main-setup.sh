@@ -11,6 +11,7 @@ echo "=== Arion main setup $(date -Is)"
 REGION="${ARION_REGION:?}"
 BRANCH="${ARION_BRANCH:-main}"
 BUCKET="${ARION_BACKUP_BUCKET:?}"
+NODE_GROUP="${ARION_NODE_GROUP:-arion-nodes}"
 ROOT=/opt/arion
 REPOS="core pipeline c1 db server node analyst"
 export DEBIAN_FRONTEND=noninteractive HOME=/root
@@ -18,6 +19,15 @@ export DEBIAN_FRONTEND=noninteractive HOME=/root
 param() { aws ssm get-parameter --region "$REGION" --name "$1" --with-decryption --query Parameter.Value --output text 2>/dev/null || true; }
 put_secret() { aws ssm put-parameter --region "$REGION" --name "$1" --type SecureString --value "$2" --overwrite >/dev/null; }
 status() { aws ssm put-parameter --region "$REGION" --name /arion/setup-status --type String --value "$1 $(date -Is)" --overwrite >/dev/null; }
+
+# deployment settings, for deploy/aws/update.sh
+mkdir -p /etc/arion
+cat > /etc/arion/deploy.env <<ENV
+ARION_REGION=$REGION
+ARION_BRANCH=$BRANCH
+ARION_BACKUP_BUCKET=$BUCKET
+ARION_NODE_GROUP=$NODE_GROUP
+ENV
 
 # ---------------------------------------------------------------- packages
 apt-get update -q
@@ -88,7 +98,8 @@ export default () =>
             simulationDays: 100,
             models: [C1 as unknown as Model]
         },
-        auth: { nodes: "required", loginAttemptsPerMinute: 5 }
+        auth: { nodes: "required", loginAttemptsPerMinute: 5 },
+        fleet: { autoScalingGroup: "${NODE_GROUP}", region: "${REGION}" }
     }) as ServerEnvironment;
 TS
 (cd "$ROOT/aethon-arion-server" && bash ci/link-siblings.sh core pipeline c1 db && npm run build)

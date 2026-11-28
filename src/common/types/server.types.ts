@@ -28,6 +28,10 @@ export type ServerEnvironment = {
         ttl: number;
     };
     options: ArionOptions;
+    fleet?: {
+        autoScalingGroup: string; // AWS Auto Scaling group of the node fleet, resized from the analyst's Monitor page
+        region: string;
+    };
     auth?: {
         nodes?: "required" | "off"; // "off" admits nodes without a key, for switching existing nodes over (default "required")
         loginAttemptsPerMinute?: number; // POST /auth/node attempts per client address per minute (default 5)

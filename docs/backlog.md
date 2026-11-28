@@ -8,8 +8,8 @@ Last updated 2026-11-28.
 | # | Item | Status |
 |---|---|---|
 | 1 | Redeploy arion-main with the latest code (Monitor page, progress endpoint, control experiments) | Pushed to the branch, not deployed |
-| 2 | An update command for arion-main (pull, build, restart) instead of re-running the full setup | Not written |
-| 3 | `deploy/aws` README: setup, Tailscale step, scaling nodes, removing the stack | Not written |
+| 2 | An update command for arion-main (pull, build, restart) | Done: `deploy/aws/update.sh` |
+| 3 | `deploy/aws` README | Done |
 
 ## Parked
 
